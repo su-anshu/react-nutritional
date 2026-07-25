@@ -1,0 +1,268 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f0f0f0;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.app { max-width: 1100px; margin: 0 auto; }
+
+h1 { font-size: 22px; margin-bottom: 20px; color: #222; }
+
+.layout {
+  display: flex;
+  gap: 36px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ── Form / control panel ── */
+.form-panel {
+  flex: 1;
+  min-width: 300px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+
+.form-panel h2 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+/* connection status */
+.status-bar {
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.status-bar.ok    { background: #d4edda; color: #155724; }
+.status-bar.error { background: #f8d7da; color: #721c24; }
+.status-bar.loading { background: #fff3cd; color: #856404; }
+
+.sheet-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sheet-row input {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.sheet-row button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #444;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sheet-row button:hover { background: #222; }
+
+.form-group { margin-bottom: 10px; }
+.form-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  background: #fff;
+}
+.form-group input:focus,
+.form-group select:focus { border-color: #555; }
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #888;
+  margin: 14px 0 8px;
+  letter-spacing: .4px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.btn {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-pdf  { background: #111; color: #fff; }
+.btn-png  { background: #444; color: #fff; }
+.btn-pdf:hover:not(:disabled) { background: #000; }
+.btn-png:hover:not(:disabled) { background: #222; }
+
+/* ── Label preview ── */
+.preview-panel {
+  flex: 0 0 auto;
+  /* Contain the fixed-width label on small screens: the panel scrolls,
+     the page doesn't. Label stays 420px so PDF/PNG export is unaffected. */
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* ════════════════════════════════
+   THE LABEL
+   Exact match to screenshot:
+   - Impact/Arial Black title
+   - 350px wide
+   - larger nutrient font
+   ════════════════════════════════ */
+.nutrition-label {
+  /* One type family, two weight tiers — matches the Helvetica idiom of a
+     real nutrition panel. Regular stack resolves to Helvetica (mac) / Arial
+     (win); heavy stack reaches a true black cut on both platforms. */
+  --label-sans:  'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --label-heavy: 'Helvetica Neue', 'Arial Black', Helvetica, Arial, sans-serif;
+
+  width: 420px;
+  border: 3px solid #000;
+  padding: 10px 14px 10px 14px;
+  background: #fff;
+  font-family: var(--label-sans);
+  color: #000;
+}
+
+/* Title: heavy Helvetica/Arial-Black, tightly set (no tracking) */
+.label-title {
+  font-family: var(--label-heavy);
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.label-thin-line {
+  border: none;
+  border-top: 0.75px solid #000;
+  margin: 0;
+}
+
+.label-thick-line {
+  border: none;
+  border-top: 3px solid #000;
+  margin: 0;
+}
+
+/* Serving size row */
+.serving-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 6px 0 0 0;
+  font-family: var(--label-sans);
+}
+
+.serving-note {
+  font-size: 11px;
+  font-weight: 400;
+  margin: 6px 0 0 0;
+  line-height: 1.3;
+  font-family: var(--label-sans);
+}
+
+/* ── Nutrient table (Per 100g / Per Serving / % RDA) ── */
+.nutri-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+  table-layout: fixed;
+}
+
+/* Header cells */
+.nutri-table thead th {
+  font-family: var(--label-sans);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 5px 4px;
+  border-bottom: 1.5px solid #000;
+  vertical-align: bottom;
+  line-height: 1.15;
+  white-space: normal;   /* allow header text to wrap */
+}
+
+/* Body cells */
+.nutri-table tbody td {
+  font-family: var(--label-sans);
+  font-size: 13px;
+  padding: 6px 4px;
+  border-bottom: 0.75px solid #000;
+  vertical-align: baseline;
+}
+
+/* First column = nutrient name (left aligned) */
+.nutri-table .col-name {
+  text-align: left;
+  width: 30%;
+}
+/* Numeric columns (right aligned) — lining tabular figures so digits and
+   decimals align down each column */
+.nutri-table .col-num {
+  text-align: right;
+  width: 23.33%;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* Header numeric cells may wrap the serving text */
+.nutri-table thead th.col-num { white-space: normal; }
+
+/* Parent rows: heavy weight carries the top-level hierarchy */
+.nutri-table tbody tr:not(.sub) td {
+  font-family: var(--label-heavy);
+  font-weight: 800;
+}
+
+/* Sub rows: same family, regular weight + indent — as on a real panel */
+.nutri-table tbody tr.sub td {
+  font-weight: 400;
+}
+.nutri-table tbody tr.sub .col-name {
+  padding-left: 16px;
+}
+
+/* Footnotes */
+.footnotes {
+  margin-top: 5px;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.45;
+  font-family: var(--label-sans);
+}
+.footnote2 { margin-top: 5px; }
