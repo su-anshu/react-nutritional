@@ -16,9 +16,19 @@ const SIZE_PRESETS = [
 ]
 
 const TEMPLATES = [
-  { id: 'fssai',   name: 'FSSAI Tabular' },
-  { id: 'fda',     name: 'FDA Vertical' },
-  { id: 'compact', name: 'Compact Strip' },
+  { id: 'fssai',       name: 'FSSAI Tabular' },
+  { id: 'fda',         name: 'FDA Vertical' },
+  { id: 'compact',     name: 'Compact Strip' },
+  { id: 'boxed',       name: 'Boxed Banner' },
+  { id: 'curved',      name: 'Curved Panel' },
+  { id: 'twotone',     name: 'Two-Tone Split' },
+  { id: 'minimal',     name: 'Minimal Line' },
+  { id: 'herotiles',   name: 'Hero Tiles' },
+  { id: 'dualcards',   name: 'Dual Stat Cards' },
+  { id: 'darkpremium', name: 'Dark Premium' },
+  { id: 'iconrow',     name: 'Icon Row' },
+  { id: 'rdaring',     name: 'RDA Ring' },
+  { id: 'editorial',   name: 'Editorial Serif' },
 ]
 
 // remembered UI state
@@ -262,18 +272,15 @@ export default function App() {
           <div className="option-grid">
             <div>
               <div className="section-title">Template</div>
-              <div className="segmented">
+              <select
+                className="template-select"
+                value={template}
+                onChange={e => setTemplate(e.target.value)}
+              >
                 {TEMPLATES.map(t => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`segment${template === t.id ? ' active' : ''}`}
-                    onClick={() => setTemplate(t.id)}
-                  >
-                    {t.name}
-                  </button>
+                  <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
-              </div>
+              </select>
             </div>
             <div>
               <div className="section-title">Print size (300 DPI)</div>

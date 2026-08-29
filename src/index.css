@@ -257,6 +257,23 @@ h1 {
   color: var(--text-3);
 }
 
+.template-select {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.template-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3.5px rgba(0,113,227,.18);
+}
+
 /* ── Batch tools (search + select all / clear) ── */
 .batch-tools {
   display: flex;
@@ -668,3 +685,200 @@ h1 {
   font-size: 10.5px;
   margin-top: 2px;
 }
+
+/* ════════════════════════════════
+   NEW TEMPLATES — 10 additional designs
+   Same data, same export path — only look changes.
+   ════════════════════════════════ */
+
+/* Shared cell alignment reused by every new table (lower specificity than
+   .nutri-table's own rules, so the original FSSAI table is unaffected) */
+.col-name { text-align: left; width: 34%; }
+.col-num  { text-align: right; width: 22%; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+
+/* ── Boxed Banner ── */
+.template-boxed { border: 4px solid #f2b705; padding: 0; }
+.boxed-banner {
+  background: #f2b705;
+  color: #1a1200;
+  font-family: var(--label-heavy);
+  font-weight: 800;
+  font-size: 20px;
+  text-align: center;
+  padding: 10px 12px;
+}
+.boxed-sub {
+  font-family: var(--label-semi);
+  font-weight: 600;
+  font-size: 12px;
+  text-align: center;
+  padding: 5px 0 2px;
+  background: #fff6d9;
+}
+.boxed-serving {
+  font-family: var(--label-semi);
+  font-weight: 600;
+  font-size: 12px;
+  text-align: center;
+  padding: 0 0 6px;
+  background: #fff6d9;
+  border-bottom: 3px solid #f2b705;
+}
+.boxed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.boxed-table thead th {
+  font-family: var(--label-sans);
+  font-weight: 700;
+  font-size: 10.5px;
+  padding: 6px 8px;
+  background: #f2b705;
+  color: #1a1200;
+}
+.boxed-table tbody td {
+  font-family: var(--label-sans);
+  font-size: 13px;
+  padding: 6px 8px;
+  border-bottom: 0.75px solid #e7d19a;
+}
+.boxed-table tbody tr.alt td { background: #fffaeb; }
+.boxed-table tbody tr.sub .col-name { padding-left: 18px; font-family: var(--label-semi); font-weight: 500; }
+.boxed-table tbody tr:not(.sub) td { font-family: var(--label-heavy); font-weight: 800; }
+.boxed-footnote {
+  font-family: var(--label-semi);
+  font-size: 9.5px;
+  padding: 5px 10px 8px;
+  background: #fff6d9;
+}
+
+/* ── Curved Panel ── */
+.template-curved {
+  border: none;
+  border-radius: 20px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.10), 0 10px 28px rgba(0,0,0,.08);
+}
+.curved-accent-bar { height: 8px; background: linear-gradient(90deg, #6366f1, #06b6d4); }
+.curved-head { padding: 14px 20px 8px; }
+.curved-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; }
+.curved-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; margin-top: 2px; color: #555; }
+.curved-table-wrap { padding: 0 20px 16px; }
+.curved-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.curved-table thead th {
+  font-family: var(--label-sans); font-weight: 700; font-size: 10.5px;
+  padding: 6px 4px; border-bottom: 1.5px solid #e5e7eb;
+}
+.curved-table tbody td {
+  font-family: var(--label-sans); font-size: 13px; padding: 7px 4px;
+  border-bottom: 0.75px solid #eef0f3;
+}
+.curved-table tbody tr.sub .col-name { padding-left: 16px; font-family: var(--label-semi); font-weight: 500; }
+.curved-table tbody tr:not(.sub) td { font-family: var(--label-heavy); font-weight: 800; }
+
+/* ── Two-Tone Split ── */
+.twotone-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; }
+.twotone-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; margin: 2px 0 8px; }
+.twotone-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.twotone-table thead th { font-family: var(--label-sans); font-weight: 700; font-size: 10.5px; padding: 6px 4px; }
+.twotone-table thead .tt-name-head { background: #111; }
+.tt-name {
+  background: #111; color: #fff;
+  font-family: var(--label-semi); font-weight: 600; font-size: 13px;
+  padding: 7px 10px; width: 34%;
+}
+.twotone-table tbody tr.sub .tt-name { padding-left: 20px; font-weight: 500; background: #333; }
+.twotone-table tbody td.col-num { padding: 7px 4px; font-family: var(--label-sans); font-size: 13px; border-bottom: 0.75px solid #e5e5e5; }
+.twotone-table tbody tr:not(.sub) td.col-num { font-family: var(--label-heavy); font-weight: 800; }
+
+/* ── Minimal Line ── */
+.template-minimal { border: none; padding: 16px 6px; }
+.minimal-title { font-family: var(--label-sans); font-weight: 300; font-size: 26px; letter-spacing: 2px; text-transform: uppercase; }
+.minimal-serving { font-family: var(--label-sans); font-weight: 400; font-size: 12px; color: #666; margin-top: 4px; }
+.minimal-rule { border: none; border-top: 0.75px solid #ccc; margin: 10px 0; }
+.minimal-row { display: flex; justify-content: space-between; padding: 5px 0; font-family: var(--label-sans); font-weight: 400; font-size: 13px; }
+.minimal-row.sub { padding-left: 16px; color: #777; font-size: 12px; }
+.minimal-name { flex: 1; }
+.minimal-val { width: 70px; text-align: right; }
+.minimal-dv { width: 55px; text-align: right; color: #888; }
+.minimal-footnote { font-family: var(--label-sans); font-size: 9.5px; color: #999; margin-top: 8px; }
+
+/* ── Hero Tiles ── */
+.hero-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; }
+.hero-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; margin: 2px 0 10px; }
+.hero-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.hero-tile { background: #111; color: #fff; border-radius: 10px; padding: 10px 12px; }
+.hero-tile-value { font-family: var(--label-heavy); font-weight: 800; font-size: 22px; }
+.hero-tile-name { font-family: var(--label-semi); font-weight: 500; font-size: 11px; opacity: .8; margin-top: 2px; }
+.hero-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.hero-table thead th { font-family: var(--label-sans); font-weight: 700; font-size: 10.5px; padding: 5px 4px; border-bottom: 1.5px solid #000; }
+.hero-table tbody td { font-family: var(--label-sans); font-size: 13px; padding: 6px 4px; border-bottom: 0.75px solid #ddd; }
+.hero-table tbody tr.sub .col-name { padding-left: 16px; font-family: var(--label-semi); font-weight: 500; }
+.hero-table tbody tr:not(.sub) td { font-family: var(--label-heavy); font-weight: 800; }
+
+/* ── Dual Stat Cards ── */
+.cards-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; }
+.cards-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; margin: 2px 0 10px; }
+.cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.nutrient-card { border: 1px solid #e5e5e5; border-radius: 8px; padding: 7px 9px; position: relative; }
+.nutrient-card-name { font-family: var(--label-semi); font-weight: 600; font-size: 11.5px; padding-right: 40px; }
+.nutrient-card-vals { font-family: var(--label-sans); font-size: 11px; color: #333; margin-top: 3px; line-height: 1.5; }
+.nc-label { color: #999; font-size: 9.5px; margin-right: 3px; }
+.nutrient-card-dv { position: absolute; top: 7px; right: 9px; font-family: var(--label-heavy); font-weight: 800; font-size: 11px; color: #0071e3; }
+
+/* ── Dark Premium ── */
+.template-darkpremium { background: #0d0d0d; border: 1px solid #2a2a2a; color: #e9d9a8; }
+.dp-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; color: #f0d78c; }
+.dp-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; color: #b8a978; margin: 2px 0 8px; }
+.dp-cal-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; }
+.dp-cal-value { font-family: var(--label-heavy); font-weight: 800; font-size: 34px; color: #f0d78c; }
+.dp-divider { border-top: 2px solid #b8912f; margin: 4px 0 6px; }
+.dp-row { display: flex; justify-content: space-between; font-family: var(--label-sans); font-size: 13px; padding: 5px 0; border-top: 0.75px solid #2a2a2a; color: #d8c99a; }
+.dp-row.bold { font-family: var(--label-heavy); font-weight: 800; color: #f0d78c; }
+.dp-row.indent-1 { padding-left: 16px; }
+.dp-row.indent-2 { padding-left: 32px; }
+.dp-dv { font-family: var(--label-heavy); font-weight: 700; color: #f0d78c; }
+
+/* ── Icon Row ── */
+.ir-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; }
+.ir-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; margin: 2px 0 8px; }
+.ir-table { width: 100%; border-collapse: collapse; }
+.ir-table thead th { font-family: var(--label-sans); font-weight: 700; font-size: 10.5px; padding: 5px 4px; border-bottom: 1.5px solid #000; }
+.ir-swatch-head { width: 18px; }
+.ir-table tbody td { font-family: var(--label-sans); font-size: 13px; padding: 6px 4px; border-bottom: 0.75px solid #ddd; vertical-align: middle; }
+.ir-swatch { width: 18px; }
+.ir-swatch span { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.ir-table tbody tr.sub .col-name { padding-left: 14px; font-family: var(--label-semi); font-weight: 500; }
+.ir-table tbody tr:not(.sub) td { font-family: var(--label-heavy); font-weight: 800; }
+
+/* ── RDA Ring ── */
+.rr-title { font-family: var(--label-heavy); font-weight: 800; font-size: 26px; }
+.rr-serving { font-family: var(--label-semi); font-weight: 500; font-size: 12px; margin: 2px 0 8px; }
+.rr-table { width: 100%; border-collapse: collapse; }
+.rr-table thead th { font-family: var(--label-sans); font-weight: 700; font-size: 10.5px; padding: 5px 4px; border-bottom: 1.5px solid #000; }
+.rr-dv-head { width: 70px; }
+.rr-table tbody td { font-family: var(--label-sans); font-size: 13px; padding: 5px 4px; border-bottom: 0.75px solid #ddd; }
+.rr-table tbody tr.sub .col-name { padding-left: 16px; font-family: var(--label-semi); font-weight: 500; }
+.rr-table tbody tr:not(.sub) td { font-family: var(--label-heavy); font-weight: 800; }
+.rr-dv-cell { text-align: right; }
+.ring-wrap { display: inline-flex; align-items: center; gap: 4px; }
+.ring-bg { fill: none; stroke: #e5e5e5; stroke-width: 3; }
+.ring-fg { fill: none; stroke: #0071e3; stroke-width: 3; stroke-linecap: round; }
+.ring-text { font-family: var(--label-sans); font-size: 10px; }
+.ring-dash { color: #999; }
+
+/* ── Editorial ── */
+.template-editorial { font-family: Georgia, 'Times New Roman', serif; }
+.ed-masthead {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  font-size: 30px;
+  text-align: center;
+  letter-spacing: 1px;
+  border-bottom: 2px solid #000;
+  padding-bottom: 6px;
+}
+.ed-serving { font-size: 13px; text-align: center; margin: 6px 0 10px; font-style: italic; }
+.ed-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.ed-table thead th { font-weight: 700; font-size: 11px; font-style: italic; padding: 5px 4px; border-bottom: 1px solid #000; }
+.ed-table tbody td { font-size: 13px; padding: 6px 4px; border-bottom: 0.5px solid #999; }
+.ed-table tbody tr.sub .col-name { padding-left: 18px; font-style: italic; }
+.ed-footnote { font-size: 10px; font-style: italic; margin-top: 6px; text-align: center; color: #555; }
