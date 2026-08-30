@@ -22,7 +22,7 @@ describe('Nutrition Calculation Engine - Seed Formulations', () => {
     expect(result.nutrients.energy).toBe(394)
     expect(result.nutrients.protein).toBe(22.5)
     expect(result.nutrients.totalCarb).toBe(64)
-    expect(result.nutrients.availableCarb).toBe(47)
+    expect(result.nutrients.availableCarb).toBeNull() // Unconfirmed in baseline, pending proximate analysis
     expect(result.nutrients.dietaryFiber).toBe(17)
     expect(result.nutrients.totalSugar).toBe(0.8)
     expect(result.nutrients.addedSugar).toBe(0)
@@ -166,9 +166,34 @@ describe('Safe Regulatory Label Transfer', () => {
 })
 
 describe('Validation Engine - Energy & Physics', () => {
-  it('validates preferred Atwater formula: (4*P + 4*AvailCarb + 9*F + 2*Fiber)', () => {
+  it('validates fallback Atwater formula when availableCarb is unconfirmed (4*P + 4*TotalCarb + 9*F)', () => {
     const chanaRecipe = DEFAULT_RECIPES.find((r) => r.id === 'chana-sattu')
     const result = calculateRecipeNutrition(chanaRecipe, DEFAULT_INGREDIENTS)
+    const val = validateFormulation(result)
+
+    expect(val.isValid).toBe(true)
+    const atwaterCheck = val.checks.find((c) => c.id === 'energy-atwater')
+    expect(['PASS', 'INFO']).toContain(atwaterCheck.status)
+    expect(atwaterCheck.details.formulaMethod).toContain('Fallback Atwater')
+  })
+
+  it('validates preferred Atwater formula when availableCarb is present (4*P + 4*AvailCarb + 9*F + 2*Fiber)', () => {
+    const recipeWithAvailCarb = {
+      id: 'test-avail-carb',
+      name: 'Test Avail Carb Recipe',
+      items: [{ ingredientId: 'roasted-chana-sattu', grams: 100 }],
+    }
+    const ingredientsWithAvail = [
+      {
+        ...DEFAULT_INGREDIENTS[0],
+        nutrients: {
+          ...DEFAULT_INGREDIENTS[0].nutrients,
+          availableCarb: 47,
+        },
+      },
+      ...DEFAULT_INGREDIENTS.slice(1),
+    ]
+    const result = calculateRecipeNutrition(recipeWithAvailCarb, ingredientsWithAvail)
     const val = validateFormulation(result)
 
     expect(val.isValid).toBe(true)

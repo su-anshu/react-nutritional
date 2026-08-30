@@ -4,6 +4,7 @@ import ProductSelect from './components/ProductSelect'
 import FormulationWorkspace from './components/formulation/FormulationWorkspace'
 import IngredientMaster from './components/formulation/IngredientMaster'
 import DataSettings from './components/formulation/DataSettings'
+import AIResearchWorkspace from './components/ai/AIResearchWorkspace'
 import { DEFAULT_DATA, GOOGLE_SHEETS_URL, TEMPLATE_GROUPS } from './constants'
 import { DEFAULT_INGREDIENTS } from './data/ingredientMaster'
 import { DEFAULT_RECIPES } from './data/productRecipes'
@@ -25,6 +26,7 @@ const NAV_VIEWS = {
   LABEL_GENERATOR: 'LABEL_GENERATOR',
   FORMULATION: 'FORMULATION',
   INGREDIENT_MASTER: 'INGREDIENT_MASTER',
+  AI_RESEARCH: 'AI_RESEARCH',
   DATA_SETTINGS: 'DATA_SETTINGS',
 }
 
@@ -418,7 +420,7 @@ export default function App() {
         <div className="header-brand-block">
           <h1>SattuPro Formulation & Nutrition Suite</h1>
           <p className="app-subtitle">
-            Food Formulation Engine · FSSAI Validation · Statutory Label Generator · 300 DPI Exporter
+            Recipe Nutrition Calculation · Data Validation · Claim Screening · Label Workspace
           </p>
         </div>
 
@@ -444,6 +446,13 @@ export default function App() {
             onClick={() => setActiveView(NAV_VIEWS.INGREDIENT_MASTER)}
           >
             🥗 Ingredient Master
+          </button>
+          <button
+            type="button"
+            className={`nav-tab-btn ${activeView === NAV_VIEWS.AI_RESEARCH ? 'active' : ''}`}
+            onClick={() => setActiveView(NAV_VIEWS.AI_RESEARCH)}
+          >
+            🔎 AI Research
           </button>
           <button
             type="button"
@@ -773,7 +782,34 @@ export default function App() {
         />
       )}
 
-      {/* ── View 4: DATA & BACKUP ── */}
+      {/* ── View 4: AI RESEARCH ── */}
+      {activeView === NAV_VIEWS.AI_RESEARCH && (
+        <AIResearchWorkspace
+          ingredients={
+            Array.isArray(ingredients)
+              ? Object.fromEntries(ingredients.map((i) => [i.id, i]))
+              : ingredients
+          }
+          onUpdateIngredient={(id, updated) => {
+            setIngredients((prev) => {
+              if (Array.isArray(prev)) {
+                return prev.map((i) => (i.id === id ? updated : i))
+              }
+              return { ...prev, [id]: updated }
+            })
+          }}
+          onAddIngredient={(newIng) => {
+            setIngredients((prev) => {
+              if (Array.isArray(prev)) {
+                return [newIng, ...prev]
+              }
+              return { ...prev, [newIng.id]: newIng }
+            })
+          }}
+        />
+      )}
+
+      {/* ── View 5: DATA & BACKUP ── */}
       {activeView === NAV_VIEWS.DATA_SETTINGS && (
         <DataSettings
           ingredientMaster={ingredients}

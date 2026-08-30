@@ -10,8 +10,8 @@ export default function ClaimChecker({ formulationResult }) {
     return <div className="card-panel">No formulation to check claims for.</div>
   }
 
-  const { nutrients, metadata, coverage } = formulationResult
-  const claimEvaluation = evaluateClaims(nutrients, metadata, coverage)
+  const { nutrients, metadata, coverage, nutrientMetadata } = formulationResult
+  const claimEvaluation = evaluateClaims(nutrients, metadata, coverage, nutrientMetadata)
   const scanResult = scanMarketingText(marketingCopy)
 
   const categories = ['ALL', ...Object.values(CLAIM_CATEGORIES)]
@@ -99,50 +99,45 @@ export default function ClaimChecker({ formulationResult }) {
 
             {c.mandatoryAdvisory && (
               <div className="claim-advisory-box">
-                ℹ️ {c.mandatoryAdvisory}
+                {c.mandatoryAdvisory}
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Real-time Marketing Copy Prohibited Claims Scanner */}
+      {/* Prohibited Claim Scanner */}
       <div className="marketing-scanner-section">
-        <div className="scanner-header">
-          <h4>🛡️ Prohibited Medical & Therapeutic Claims Scanner</h4>
-          <p className="subtext">
-            Under FSSAI rules, food products cannot assert disease prevention, treatment, or cures.
-            Paste packaging bullets or ad slogans below to scan for prohibited patterns.
-          </p>
+        <div className="section-title">
+          🛡️ Prohibited Medical & Therapeutic Claim Scanner
         </div>
+        <p className="subtext">
+          Paste proposed front-of-pack or e-commerce marketing copy to scan for non-compliant disease cure, treatment, or drug-like claims prohibited for food products.
+        </p>
 
         <textarea
-          className="marketing-textarea"
           rows={3}
-          placeholder="Paste marketing copy or packaging bullets here (e.g., 'Nutrient-dense roasted sattu drink for daily vitality and sustained energy...')"
+          className="text-input"
+          placeholder="Paste marketing copy here (e.g. 'Cures diabetes and burns belly fat naturally')..."
           value={marketingCopy}
           onChange={(e) => setMarketingCopy(e.target.value)}
         />
 
         {marketingCopy.trim() && (
-          <div className="scanner-results-area">
-            {!scanResult.hasViolations ? (
-              <div className="scanner-clean-msg">
-                ✓ {scanResult.message}
+          <div
+            className={`scanner-result ${
+              scanResult.hasViolations ? 'result-danger' : 'result-safe'
+            }`}
+          >
+            <div className="scanner-result-msg">{scanResult.message}</div>
+            {scanResult.matches.map((m, idx) => (
+              <div key={idx} className="violation-item">
+                <span className="violation-severity font-mono">
+                  [{m.severity}]
+                </span>{' '}
+                <strong>{m.label}:</strong> {m.note}
               </div>
-            ) : (
-              <div className="scanner-violations-list">
-                <div className="scanner-alert-title">
-                  ⚠️ {scanResult.matches.length} Prohibited Claim Pattern(s) Detected:
-                </div>
-                {scanResult.matches.map((v, i) => (
-                  <div key={i} className={`violation-item violation-${v.severity.toLowerCase()}`}>
-                    <span className="violation-severity">[{v.severity}]</span>
-                    <strong>{v.label}:</strong> {v.note}
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         )}
       </div>

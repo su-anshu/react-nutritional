@@ -31,11 +31,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 10% of Daily Value (5.4g per 100g solid)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'protein',
     dependentNutrients: ['protein'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.protein?.percentage ?? 100
       if (cov < 99.9 || nutrients.protein == null) {
         return {
@@ -47,11 +49,16 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.protein >= 5.4
+      const conf = nutrientMetadata.protein?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
-          ? `Protein is ${nutrients.protein.toFixed(1)}g/100g (≥ 5.4g/100g threshold, 10% RDA).`
+          ? `Protein is ${nutrients.protein.toFixed(1)}g/100g (≥ 5.4g/100g threshold, 10% RDA).${conf === 'Low' || conf === 'Medium-Low' ? ' Low-confidence ingredients require finished product lab test.' : ''}`
           : `Protein is ${nutrients.protein.toFixed(1)}g/100g (less than 5.4g/100g threshold).`,
         threshold: '≥ 5.4g / 100g (10% RDA)',
         actual: `${nutrients.protein.toFixed(1)}g`,
@@ -65,11 +72,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 20% of Daily Value (10.8g per 100g solid)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'protein',
     dependentNutrients: ['protein'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.protein?.percentage ?? 100
       if (cov < 99.9 || nutrients.protein == null) {
         return {
@@ -81,11 +90,16 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.protein >= 10.8
+      const conf = nutrientMetadata.protein?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
-          ? `Protein is ${nutrients.protein.toFixed(1)}g/100g (≥ 10.8g/100g threshold, 20% RDA).`
+          ? `Protein is ${nutrients.protein.toFixed(1)}g/100g (≥ 10.8g/100g threshold, 20% RDA).${conf === 'Low' || conf === 'Medium-Low' ? ' Low-confidence ingredients require finished product lab test.' : ''}`
           : `Protein is ${nutrients.protein.toFixed(1)}g/100g (less than 10.8g/100g threshold).`,
         threshold: '≥ 10.8g / 100g (20% RDA)',
         actual: `${nutrients.protein.toFixed(1)}g`,
@@ -101,11 +115,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 3g dietary fiber per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'dietaryFiber',
     dependentNutrients: ['dietaryFiber'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.dietaryFiber?.percentage ?? 100
       if (cov < 99.9 || nutrients.dietaryFiber == null) {
         return {
@@ -117,11 +133,16 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.dietaryFiber >= 3.0
+      const conf = nutrientMetadata.dietaryFiber?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
-          ? `Dietary fibre is ${nutrients.dietaryFiber.toFixed(1)}g/100g (≥ 3.0g/100g threshold).`
+          ? `Dietary fibre is ${nutrients.dietaryFiber.toFixed(1)}g/100g (≥ 3.0g/100g threshold).${conf === 'Low' || conf === 'Medium-Low' ? ' Low-confidence ingredients require finished product lab test.' : ''}`
           : `Dietary fibre is ${nutrients.dietaryFiber.toFixed(1)}g/100g (less than 3.0g/100g).`,
         threshold: '≥ 3.0g / 100g',
         actual: `${nutrients.dietaryFiber.toFixed(1)}g`,
@@ -135,11 +156,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 6g dietary fiber per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'dietaryFiber',
     dependentNutrients: ['dietaryFiber'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.dietaryFiber?.percentage ?? 100
       if (cov < 99.9 || nutrients.dietaryFiber == null) {
         return {
@@ -151,11 +174,16 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.dietaryFiber >= 6.0
+      const conf = nutrientMetadata.dietaryFiber?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
-          ? `Dietary fibre is ${nutrients.dietaryFiber.toFixed(1)}g/100g (≥ 6.0g/100g threshold).`
+          ? `Dietary fibre is ${nutrients.dietaryFiber.toFixed(1)}g/100g (≥ 6.0g/100g threshold).${conf === 'Low' || conf === 'Medium-Low' ? ' Low-confidence ingredients require finished product lab test.' : ''}`
           : `Dietary fibre is ${nutrients.dietaryFiber.toFixed(1)}g/100g (less than 6.0g/100g).`,
         threshold: '≥ 6.0g / 100g',
         actual: `${nutrients.dietaryFiber.toFixed(1)}g`,
@@ -171,11 +199,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains not more than 3g total fat per 100g (solids)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'totalFat',
     dependentNutrients: ['totalFat'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.totalFat?.percentage ?? 100
       if (cov < 99.9 || nutrients.totalFat == null) {
         return {
@@ -187,8 +217,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.totalFat <= 3.0
+      const conf = nutrientMetadata.totalFat?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Total fat is ${nutrients.totalFat.toFixed(1)}g/100g (≤ 3.0g/100g limit).`
@@ -205,11 +240,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains not more than 0.5g fat per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'totalFat',
     dependentNutrients: ['totalFat'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.totalFat?.percentage ?? 100
       if (cov < 99.9 || nutrients.totalFat == null) {
         return {
@@ -221,8 +258,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.totalFat <= 0.5
+      const conf = nutrientMetadata.totalFat?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Total fat is ${nutrients.totalFat.toFixed(1)}g/100g (≤ 0.5g/100g limit).`
@@ -239,11 +281,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Saturated fat + Trans fat ≤ 1.5g/100g and saturated fat provides ≤ 10% of total energy',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid & % energy',
     primaryNutrient: 'saturatedFat',
     dependentNutrients: ['saturatedFat', 'transFat', 'energy'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const satCov = coverage.saturatedFat?.percentage ?? 100
       const transCov = coverage.transFat?.percentage ?? 100
       const energyCov = coverage.energy?.percentage ?? 100
@@ -266,9 +310,13 @@ export const FSSAI_CLAIM_RULES = [
       const satPlusTrans = nutrients.saturatedFat + nutrients.transFat
       const satCalPct = nutrients.energy > 0 ? ((nutrients.saturatedFat * 9) / nutrients.energy) * 100 : 0
       const meets = satPlusTrans <= 1.5 && satCalPct <= 10.0
+      const conf = nutrientMetadata.saturatedFat?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
 
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Saturated + Trans fat is ${satPlusTrans.toFixed(2)}g/100g (≤ 1.5g) and provides ${satCalPct.toFixed(1)}% of energy (≤ 10%).`
@@ -285,11 +333,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains not more than 0.2g trans fat per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'transFat',
     dependentNutrients: ['transFat'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.transFat?.percentage ?? 100
       if (cov < 99.9 || nutrients.transFat == null) {
         return {
@@ -301,8 +351,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.transFat <= 0.2
+      const conf = nutrientMetadata.transFat?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Trans fat is ${nutrients.transFat.toFixed(2)}g/100g (≤ 0.2g/100g limit).`
@@ -319,11 +374,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Cholesterol ≤ 5mg/100g and saturated fat ≤ 1.5g/100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'cholesterol',
     dependentNutrients: ['cholesterol', 'saturatedFat'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cholCov = coverage.cholesterol?.percentage ?? 100
       const satCov = coverage.saturatedFat?.percentage ?? 100
 
@@ -338,8 +395,13 @@ export const FSSAI_CLAIM_RULES = [
       }
 
       const meets = nutrients.cholesterol <= 5.0 && nutrients.saturatedFat <= 1.5
+      const conf = nutrientMetadata.cholesterol?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Cholesterol is ${nutrients.cholesterol.toFixed(1)}mg/100g (≤ 5mg) and saturated fat is ${nutrients.saturatedFat.toFixed(2)}g/100g (≤ 1.5g).`
@@ -358,6 +420,8 @@ export const FSSAI_CLAIM_RULES = [
     description: 'No added sugars or sweetening ingredients used during processing',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'formulation composition',
     primaryNutrient: 'addedSugar',
     dependentNutrients: ['addedSugar'],
@@ -379,6 +443,9 @@ export const FSSAI_CLAIM_RULES = [
       const advisory = (nutrients.totalSugar && nutrients.totalSugar > 0)
         ? 'MANDATORY ADVISORY: Contains naturally occurring sugars.'
         : ''
+      const naturalSugarText = nutrients.totalSugar != null
+        ? `${Number(nutrients.totalSugar).toFixed(1)}g natural`
+        : 'Total naturally occurring sugar: unknown'
 
       return {
         status: eligible ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
@@ -387,7 +454,7 @@ export const FSSAI_CLAIM_RULES = [
           ? `Added sugars: 0g. ${advisory}`
           : `Added sugars is ${nutrients.addedSugar}g (must be 0g with no added sweeteners).`,
         threshold: '0g added sugar & 0 added sweeteners',
-        actual: `${nutrients.addedSugar.toFixed(1)}g added (${(nutrients.totalSugar || 0).toFixed(1)}g natural)`,
+        actual: `${nutrients.addedSugar.toFixed(1)}g added (${naturalSugarText})`,
         mandatoryAdvisory: advisory,
       }
     },
@@ -399,11 +466,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Total sugars ≤ 0.5g per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'totalSugar',
     dependentNutrients: ['totalSugar'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.totalSugar?.percentage ?? 100
       if (cov < 99.9 || nutrients.totalSugar == null) {
         return {
@@ -415,8 +484,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.totalSugar <= 0.5
+      const conf = nutrientMetadata.totalSugar?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Total sugar is ${nutrients.totalSugar.toFixed(1)}g/100g (≤ 0.5g/100g limit).`
@@ -435,11 +509,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Sodium ≤ 120mg per 100g (or equivalent salt ≤ 0.3g/100g)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'sodium',
     dependentNutrients: ['sodium'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.sodium?.percentage ?? 100
       if (cov < 99.9 || nutrients.sodium == null) {
         return {
@@ -451,8 +527,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.sodium <= 120
+      const conf = nutrientMetadata.sodium?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Sodium is ${nutrients.sodium.toFixed(0)}mg/100g (≤ 120mg/100g limit).`
@@ -469,11 +550,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Sodium ≤ 40mg per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'sodium',
     dependentNutrients: ['sodium'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.sodium?.percentage ?? 100
       if (cov < 99.9 || nutrients.sodium == null) {
         return {
@@ -485,8 +568,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.sodium <= 40
+      const conf = nutrientMetadata.sodium?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Sodium is ${nutrients.sodium.toFixed(0)}mg/100g (≤ 40mg/100g limit).`
@@ -503,11 +591,13 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Sodium ≤ 5mg per 100g',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'sodium',
     dependentNutrients: ['sodium'],
     requiresLabValidation: false,
-    check: ({ nutrients, coverage = {} }) => {
+    check: ({ nutrients, coverage = {}, nutrientMetadata = {} }) => {
       const cov = coverage.sodium?.percentage ?? 100
       if (cov < 99.9 || nutrients.sodium == null) {
         return {
@@ -519,8 +609,13 @@ export const FSSAI_CLAIM_RULES = [
         }
       }
       const meets = nutrients.sodium <= 5
+      const conf = nutrientMetadata.sodium?.confidence || 'Medium'
+      const status = meets
+        ? (conf === 'Low' || conf === 'Medium-Low' ? CLAIM_STATUS.LAB_VALIDATION_REQUIRED : CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
+        : CLAIM_STATUS.NOT_ELIGIBLE
+
       return {
-        status: meets ? CLAIM_STATUS.NUMERICALLY_ELIGIBLE : CLAIM_STATUS.NOT_ELIGIBLE,
+        status,
         eligible: meets,
         reason: meets
           ? `Sodium is ${nutrients.sodium.toFixed(0)}mg/100g (≤ 5mg/100g limit).`
@@ -537,6 +632,8 @@ export const FSSAI_CLAIM_RULES = [
     description: 'No added sodium chloride or salt ingredients in recipe formulation',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'formulation composition',
     primaryNutrient: 'sodium',
     dependentNutrients: ['sodium'],
@@ -553,14 +650,15 @@ export const FSSAI_CLAIM_RULES = [
           mandatoryAdvisory: '',
         }
       }
-      const sodium = nutrients.sodium || 0
-      const advisory = sodium > 120 ? 'STATUTORY ADVISORY: Not a low sodium food.' : ''
+      const sodium = nutrients.sodium
+      const sodiumText = sodium != null ? `${Number(sodium).toFixed(0)}mg natural sodium` : 'Natural sodium: unknown'
+      const advisory = (sodium != null && sodium > 120) ? 'STATUTORY ADVISORY: Not a low sodium food.' : ''
       return {
         status: CLAIM_STATUS.NUMERICALLY_ELIGIBLE,
         eligible: true,
         reason: `No salt added in recipe formulation. ${advisory}`,
         threshold: '0g added salt ingredients in recipe',
-        actual: `0g added salt (${sodium.toFixed(0)}mg natural sodium)`,
+        actual: `0g added salt (${sodiumText})`,
         mandatoryAdvisory: advisory,
       }
     },
@@ -574,6 +672,8 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 15% RDA per 100g (≥ 2.85mg / 100g)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'iron',
     dependentNutrients: ['iron'],
@@ -613,6 +713,8 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 30% RDA per 100g (≥ 5.7mg / 100g)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'iron',
     dependentNutrients: ['iron'],
@@ -652,6 +754,8 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 15% RDA per 100g (≥ 150mg / 100g)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'calcium',
     dependentNutrients: ['calcium'],
@@ -691,6 +795,8 @@ export const FSSAI_CLAIM_RULES = [
     description: 'Food contains at least 30% RDA per 100g (≥ 300mg / 100g)',
     jurisdiction: 'India / FSSAI',
     regulationName: 'FSSAI Advertising and Claims Regulations',
+    sourceVersion: 'FSSAI-Claims-2018-Amended-2022',
+    lastVerified: '2026-08-30',
     basis: 'per 100g solid',
     primaryNutrient: 'calcium',
     dependentNutrients: ['calcium'],

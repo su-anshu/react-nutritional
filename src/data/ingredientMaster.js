@@ -5,8 +5,9 @@
  * 
  * IMPORTANT PRINCIPLES:
  * - Missing ≠ Zero (null indicates unanalyzed/missing data)
- * - Strict Source Governance (LAB_VERIFIED, SUPPLIER_COA, INTERNAL_CONFIRMED_BASE, IFCT, USDA, REFERENCE_DATABASE, PROXY_ESTIMATE)
+ * - Strict Source Governance (LAB_VERIFIED, SUPPLIER_COA, INTERNAL_CONFIRMED_BASE, IFCT, USDA, PEER_REVIEWED, REFERENCE_DATABASE, PROXY_ESTIMATE, DERIVED_ESTIMATE, MANUAL_ESTIMATE, AI_RESEARCH_CANDIDATE, MISSING)
  * - Representative specs must NOT be labelled as SUPPLIER_COA
+ * - Raw produce records must NOT be claimed as exact dehydrated powder specs
  */
 
 export const SOURCE_TYPES = {
@@ -18,7 +19,9 @@ export const SOURCE_TYPES = {
   PEER_REVIEWED: 'PEER_REVIEWED',
   REFERENCE_DATABASE: 'REFERENCE_DATABASE',
   PROXY_ESTIMATE: 'PROXY_ESTIMATE',
+  DERIVED_ESTIMATE: 'DERIVED_ESTIMATE',
   MANUAL_ESTIMATE: 'MANUAL_ESTIMATE',
+  AI_RESEARCH_CANDIDATE: 'AI_RESEARCH_CANDIDATE',
   MISSING: 'MISSING',
 }
 
@@ -27,6 +30,102 @@ export const PROCESSING_MATCH = {
   CLOSE: 'CLOSE',
   PROXY: 'PROXY',
   UNKNOWN: 'UNKNOWN',
+}
+
+export const DOMAIN_TYPES = {
+  GOVERNMENT: 'GOVERNMENT',
+  PEER_REVIEWED: 'PEER_REVIEWED',
+  DATABASE: 'DATABASE',
+  SUPPLIER: 'SUPPLIER',
+  COMMERCIAL: 'COMMERCIAL',
+  UNKNOWN: 'UNKNOWN',
+}
+
+/**
+ * Classifies a URL domain to determine authority type.
+ */
+export function getDomainTypeFromUrl(url) {
+  if (!url || typeof url !== 'string') return DOMAIN_TYPES.UNKNOWN
+  const u = url.toLowerCase()
+  if (
+    u.includes('doi.org') ||
+    u.includes('ncbi.nlm.nih.gov') ||
+    u.includes('pubmed') ||
+    u.includes('sciencedirect') ||
+    u.includes('springer') ||
+    u.includes('wiley') ||
+    u.includes('nature.com') ||
+    u.includes('researchgate') ||
+    u.includes('tandfonline') ||
+    u.includes('frontiersin')
+  ) {
+    return DOMAIN_TYPES.PEER_REVIEWED
+  }
+  if (
+    u.includes('.gov') ||
+    u.includes('.nic.in') ||
+    u.includes('fssai') ||
+    u.includes('icmr') ||
+    u.includes('nin.res.in') ||
+    u.includes('usda.gov') ||
+    u.includes('fao.org')
+  ) {
+    return DOMAIN_TYPES.GOVERNMENT
+  }
+  if (u.includes('ifct2017.com') || u.includes('nal.usda.gov') || u.includes('fooddatacentral')) {
+    return DOMAIN_TYPES.DATABASE
+  }
+  if (u.includes('spec') || u.includes('coa') || u.includes('supplier')) {
+    return DOMAIN_TYPES.SUPPLIER
+  }
+  return DOMAIN_TYPES.COMMERCIAL
+}
+
+/**
+ * Deterministic quality scoring (0 to 5) for sources.
+ */
+export function getSourceQualityScore(sourceType, url) {
+  if (
+    sourceType === SOURCE_TYPES.LAB_VERIFIED ||
+    sourceType === SOURCE_TYPES.SUPPLIER_COA ||
+    sourceType === SOURCE_TYPES.INTERNAL_CONFIRMED_BASE
+  ) {
+    return 5
+  }
+  const dom = getDomainTypeFromUrl(url)
+  if (dom === DOMAIN_TYPES.GOVERNMENT || dom === DOMAIN_TYPES.PEER_REVIEWED) return 5
+  if (sourceType === SOURCE_TYPES.IFCT || sourceType === SOURCE_TYPES.USDA || dom === DOMAIN_TYPES.DATABASE) return 4
+  if (sourceType === SOURCE_TYPES.REFERENCE_DATABASE) return 3
+  if (
+    sourceType === SOURCE_TYPES.PROXY_ESTIMATE ||
+    sourceType === SOURCE_TYPES.MANUAL_ESTIMATE ||
+    sourceType === SOURCE_TYPES.DERIVED_ESTIMATE ||
+    sourceType === SOURCE_TYPES.AI_RESEARCH_CANDIDATE
+  ) {
+    return 2
+  }
+  return 1
+}
+
+/**
+ * Resolves nutrient-level metadata with fallback to ingredient-level metadata.
+ */
+export function getEffectiveNutrientMetadata(ingredient, nutrientKey) {
+  if (!ingredient) return null
+  const specific = ingredient.metadata?.nutrientMetadata?.[nutrientKey]
+  const base = ingredient.metadata || {}
+  return {
+    sourceType: specific?.sourceType || base.sourceType || SOURCE_TYPES.MISSING,
+    sourceName: specific?.sourceName || base.sourceName || 'Unknown Source',
+    sourceRecordId: specific?.sourceRecordId || base.sourceRecordId || '',
+    sourceUrl: specific?.sourceUrl || base.sourceUrl || '',
+    sourceYear: specific?.sourceYear || base.sourceYear || '',
+    confidence: specific?.confidence || base.confidence || 'Low',
+    processingMatch: specific?.processingMatch || base.processingMatch || PROCESSING_MATCH.UNKNOWN,
+    notes: specific?.notes || base.notes || '',
+    locked: Boolean(specific?.locked || base.locked),
+    lastVerified: specific?.lastVerified || base.lastVerified || '',
+  }
 }
 
 export const DEFAULT_INGREDIENTS = [
@@ -40,7 +139,7 @@ export const DEFAULT_INGREDIENTS = [
       energy: 394,
       protein: 22.5,
       totalCarb: 64.0,
-      availableCarb: 47.0,
+      availableCarb: null, // Unanalyzed analytically; left null rather than assumed
       totalSugar: 0.8,
       addedSugar: 0.0,
       dietaryFiber: 17.0,
@@ -55,8 +154,8 @@ export const DEFAULT_INGREDIENTS = [
       magnesium: null,
       folate: null,
       vitaminC: null,
-      moisture: 6.5,
-      ash: 2.5,
+      moisture: null, // Analytically unmeasured in working baseline
+      ash: null,      // Analytically unmeasured in working baseline
     },
     aminoAcids: {
       histidine: 0.62,
@@ -86,17 +185,30 @@ export const DEFAULT_INGREDIENTS = [
       sourceYear: '2026',
       confidence: 'High',
       processingMatch: PROCESSING_MATCH.EXACT,
-      notes: 'Preferred Mithila Foods working nutrition base. Replace with finished-product lab report when available. Unvalidated micronutrients left null.',
+      notes: 'Confirmed Mithila Foods working nutrition base for core macronutrients. Amino acid profile is derived from pulse reference proxy.',
       lastVerified: '2026-08-30',
       isSalt: false,
       isGluten: false,
       allergenNotes: 'Legume/Pulse (Non-statutory allergen)',
       nutrientMetadata: {
-        protein: { confidence: 'High', sourceRecordId: 'MF-CS-BASE-2026' },
-        energy: { confidence: 'High', sourceRecordId: 'MF-CS-BASE-2026' },
-        totalFat: { confidence: 'High', sourceRecordId: 'MF-CS-BASE-2026' },
-        totalCarb: { confidence: 'High', sourceRecordId: 'MF-CS-BASE-2026' },
-        dietaryFiber: { confidence: 'High', sourceRecordId: 'MF-CS-BASE-2026' },
+        energy: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        protein: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        totalCarb: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        totalSugar: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        addedSugar: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        dietaryFiber: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        totalFat: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        saturatedFat: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        transFat: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        cholesterol: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+        sodium: { sourceType: SOURCE_TYPES.INTERNAL_CONFIRMED_BASE, confidence: 'High', locked: true, sourceRecordId: 'MF-CS-BASE-2026' },
+      },
+      aminoAcidMetadata: {
+        sourceType: SOURCE_TYPES.PROXY_ESTIMATE,
+        sourceName: 'ICMR/USDA Pulse Reference Amino Acid Distribution Proxy',
+        confidence: 'Medium-Low',
+        processingMatch: PROCESSING_MATCH.PROXY,
+        notes: 'Amino acid values are proxy estimates scaled to 22.5g protein base. Laboratory HPLC assay recommended for amino acid claims.',
       },
     },
   },
@@ -128,26 +240,7 @@ export const DEFAULT_INGREDIENTS = [
       moisture: 8.1,
       ash: 7.6,
     },
-    aminoAcids: {
-      histidine: null,
-      isoleucine: null,
-      leucine: null,
-      lysine: null,
-      methionine: null,
-      phenylalanine: null,
-      threonine: null,
-      tryptophan: null,
-      valine: null,
-      alanine: null,
-      arginine: null,
-      asparticAcid: null,
-      cysteine: null,
-      glutamicAcid: null,
-      glycine: null,
-      proline: null,
-      serine: null,
-      tyrosine: null,
-    },
+    aminoAcids: {},
     metadata: {
       sourceType: SOURCE_TYPES.IFCT,
       sourceName: 'Indian Food Composition Tables 2017 (Cumin Seeds)',
@@ -248,42 +341,23 @@ export const DEFAULT_INGREDIENTS = [
       sodium: 136.0,
       calcium: 2000.0,
       iron: 28.2,
-      potassium: 1320.0,
+      potassium: 1324.0,
       magnesium: 368.0,
-      folate: 40.0,
+      folate: null,
       vitaminC: 17.3,
       moisture: 7.5,
-      ash: 11.2,
+      ash: 8.5,
     },
-    aminoAcids: {
-      histidine: 0.58,
-      isoleucine: 1.15,
-      leucine: 1.85,
-      lysine: 1.32,
-      methionine: 0.38,
-      phenylalanine: 1.25,
-      threonine: 1.05,
-      tryptophan: 0.42,
-      valine: 1.35,
-      alanine: null,
-      arginine: null,
-      asparticAcid: null,
-      cysteine: null,
-      glutamicAcid: null,
-      glycine: null,
-      proline: null,
-      serine: null,
-      tyrosine: null,
-    },
+    aminoAcids: {},
     metadata: {
-      sourceType: SOURCE_TYPES.IFCT,
-      sourceName: 'Indian Food Composition Tables 2017 (Moringa Leaves, Dried)',
-      sourceRecordId: 'IFCT2017-B045',
-      sourceUrl: 'https://www.ifct2017.com/',
-      sourceYear: '2017',
-      confidence: 'Medium',
-      processingMatch: PROCESSING_MATCH.CLOSE,
-      notes: 'High mineral botanical powder. Heat/storage sensitive micronutrients (e.g. Vitamin C) require lab validation.',
+      sourceType: SOURCE_TYPES.PROXY_ESTIMATE,
+      sourceName: 'ICMR-NIN & Botanical Literature Specification (Moringa Oleifera Dried Leaves)',
+      sourceRecordId: 'PROXY-MORINGA-LEAF',
+      sourceUrl: 'https://www.nin.res.in/',
+      sourceYear: '2022',
+      confidence: 'Medium-Low',
+      processingMatch: PROCESSING_MATCH.PROXY,
+      notes: 'Dehydrated leaf powder proxy. Micronutrients are heat and light sensitive.',
       lastVerified: '2026-08-01',
       isSalt: false,
       isGluten: false,
@@ -291,10 +365,100 @@ export const DEFAULT_INGREDIENTS = [
     },
   },
   {
+    id: 'kala-namak',
+    name: 'Kala Namak (Black Salt)',
+    aliases: ['Black Salt', 'Indian Black Salt', 'Himalayan Black Salt', 'Sulemani Namak'],
+    processing: 'kiln-fired-ground',
+    category: 'salt',
+    nutrients: {
+      energy: 0,
+      protein: 0.0,
+      totalCarb: 0.0,
+      availableCarb: 0.0,
+      totalSugar: 0.0,
+      addedSugar: 0.0,
+      dietaryFiber: 0.0,
+      totalFat: 0.0,
+      saturatedFat: 0.0,
+      transFat: 0.0,
+      cholesterol: 0.0,
+      sodium: 38000.0,
+      calcium: null,
+      iron: 35.0,
+      potassium: null,
+      magnesium: null,
+      folate: null,
+      vitaminC: null,
+      moisture: 0.8,
+      ash: 99.2,
+    },
+    aminoAcids: {},
+    metadata: {
+      sourceType: SOURCE_TYPES.REFERENCE_DATABASE,
+      sourceName: 'Indian Mineral Salt Standard Specification',
+      sourceRecordId: 'REF-SALT-KLN',
+      sourceUrl: '',
+      sourceYear: '2024',
+      confidence: 'Medium',
+      processingMatch: PROCESSING_MATCH.EXACT,
+      notes: 'Mineral salt with distinct sulphurous aroma. Sodium fraction approx 38.0% Na.',
+      lastVerified: '2026-08-01',
+      isSalt: true,
+      sodiumFraction: 0.380,
+      isGluten: false,
+      allergenNotes: '',
+    },
+  },
+  {
+    id: 'sendha-namak',
+    name: 'Sendha Namak (Rock Salt / Saindhava)',
+    aliases: ['Rock Salt', 'Himalayan Pink Salt', 'Sendha Salt', 'Saindhava Lavana'],
+    processing: 'mined-milled',
+    category: 'salt',
+    nutrients: {
+      energy: 0,
+      protein: 0.0,
+      totalCarb: 0.0,
+      availableCarb: 0.0,
+      totalSugar: 0.0,
+      addedSugar: 0.0,
+      dietaryFiber: 0.0,
+      totalFat: 0.0,
+      saturatedFat: 0.0,
+      transFat: 0.0,
+      cholesterol: 0.0,
+      sodium: 38500.0,
+      calcium: 160.0,
+      iron: 5.0,
+      potassium: 280.0,
+      magnesium: 105.0,
+      folate: null,
+      vitaminC: null,
+      moisture: 0.5,
+      ash: 99.5,
+    },
+    aminoAcids: {},
+    metadata: {
+      sourceType: SOURCE_TYPES.REFERENCE_DATABASE,
+      sourceName: 'Himalayan Rock Salt Mineral Reference',
+      sourceRecordId: 'REF-SALT-SND',
+      sourceUrl: '',
+      sourceYear: '2024',
+      confidence: 'Medium',
+      processingMatch: PROCESSING_MATCH.EXACT,
+      notes: 'Mined rock salt crystal. Sodium fraction approx 38.5% Na.',
+      lastVerified: '2026-08-01',
+      isSalt: true,
+      sodiumFraction: 0.385,
+      isGluten: false,
+      allergenNotes: '',
+    },
+  },
+  {
     id: 'iodised-salt',
-    name: 'Iodised Salt (Refined)',
-    aliases: ['Table Salt', 'Vacuum Evaporated Salt', 'Namak'],
-    processing: 'refined-mineral',
+    name: 'Iodised Salt (Vacuum Evaporated NaCl)',
+    aliases: ['Table Salt', 'Common Salt', 'White Salt', 'Iodized Table Salt', 'Refined Salt'],
+    processing: 'refined-evaporated',
     category: 'salt',
     nutrients: {
       energy: 0,
@@ -497,15 +661,16 @@ export const DEFAULT_INGREDIENTS = [
     },
     aminoAcids: {},
     metadata: {
-      sourceType: SOURCE_TYPES.USDA,
-      sourceName: 'USDA FoodData Central (Beetroot Powder)',
-      sourceRecordId: 'FDC-169145',
-      sourceUrl: 'https://fdc.nal.usda.gov/',
+      sourceType: SOURCE_TYPES.PROXY_ESTIMATE,
+      referenceDatabase: 'USDA',
+      sourceName: 'USDA FoodData Central (Raw Beet Reference proxy for Dehydrated Powder)',
+      sourceRecordId: 'FDC-169145 (Raw Beet Reference)',
+      sourceUrl: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/169145/nutrients',
       sourceYear: '2023',
-      confidence: 'Medium',
+      confidence: 'Medium-Low',
       processingMatch: PROCESSING_MATCH.PROXY,
-      notes: 'Rich in dietary nitrates and natural red betalains. Naturally sweet.',
-      lastVerified: '2026-08-01',
+      notes: 'USDA source represents raw beetroot; dehydrated powder concentration estimated separately. Rich in dietary nitrates and natural red betalains.',
+      lastVerified: '2026-08-30',
       isSalt: false,
       isGluten: false,
       allergenNotes: '',
@@ -541,15 +706,16 @@ export const DEFAULT_INGREDIENTS = [
     },
     aminoAcids: {},
     metadata: {
-      sourceType: SOURCE_TYPES.USDA,
-      sourceName: 'USDA FoodData Central (Dehydrated Apple Powder)',
-      sourceRecordId: 'FDC-171689',
-      sourceUrl: 'https://fdc.nal.usda.gov/',
+      sourceType: SOURCE_TYPES.PROXY_ESTIMATE,
+      referenceDatabase: 'USDA',
+      sourceName: 'USDA FoodData Central (Raw Apple Reference proxy for Dehydrated Powder)',
+      sourceRecordId: 'FDC-171689 (Raw Apple Reference)',
+      sourceUrl: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/171689/nutrients',
       sourceYear: '2023',
-      confidence: 'Medium',
+      confidence: 'Medium-Low',
       processingMatch: PROCESSING_MATCH.PROXY,
-      notes: 'Contains natural fructose and pectin fiber.',
-      lastVerified: '2026-08-01',
+      notes: 'USDA source represents raw apple; dehydrated powder concentration estimated separately. Contains natural fructose and pectin fiber.',
+      lastVerified: '2026-08-30',
       isSalt: false,
       isGluten: false,
       allergenNotes: '',
@@ -585,15 +751,16 @@ export const DEFAULT_INGREDIENTS = [
     },
     aminoAcids: {},
     metadata: {
-      sourceType: SOURCE_TYPES.USDA,
-      sourceName: 'USDA FoodData Central (Carrot Powder Dehydrated)',
-      sourceRecordId: 'FDC-170394',
-      sourceUrl: 'https://fdc.nal.usda.gov/',
+      sourceType: SOURCE_TYPES.PROXY_ESTIMATE,
+      referenceDatabase: 'USDA',
+      sourceName: 'USDA FoodData Central (Raw Carrot Reference proxy for Dehydrated Powder)',
+      sourceRecordId: 'FDC-170394 (Raw Carrot Reference)',
+      sourceUrl: 'https://fdc.nal.usda.gov/fdc-app.html#/food-details/170394/nutrients',
       sourceYear: '2023',
-      confidence: 'Medium',
+      confidence: 'Medium-Low',
       processingMatch: PROCESSING_MATCH.PROXY,
-      notes: 'High natural carotenoid content and dietary fiber.',
-      lastVerified: '2026-08-01',
+      notes: 'USDA source represents raw carrot; dehydrated powder concentration estimated separately. High natural carotenoids and dietary fiber.',
+      lastVerified: '2026-08-30',
       isSalt: false,
       isGluten: false,
       allergenNotes: '',
