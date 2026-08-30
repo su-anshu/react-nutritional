@@ -42,6 +42,7 @@ export default function IngredientMaster({
         energy: null,
         protein: null,
         totalCarb: null,
+        availableCarb: null,
         totalSugar: null,
         addedSugar: 0,
         dietaryFiber: null,
@@ -58,6 +59,8 @@ export default function IngredientMaster({
         sourceName: 'User Custom Entry',
         confidence: 'medium',
         isSalt: false,
+        sodiumFraction: null,
+        requiresSupplierCoa: false,
         isGluten: false,
         notes: '',
         allergenNotes: '',
@@ -77,6 +80,17 @@ export default function IngredientMaster({
     setEditingIngredient(null)
   }
 
+  const renderSourceBadge = (sourceType) => {
+    const s = (sourceType || 'IFCT').toUpperCase()
+    if (s.includes('LAB')) return <span className="badge badge-source badge-lab">LAB</span>
+    if (s.includes('COA') || s.includes('SUPPLIER')) return <span className="badge badge-source badge-coa">COA</span>
+    if (s.includes('INTERNAL')) return <span className="badge badge-source badge-internal">INTERNAL</span>
+    if (s.includes('IFCT')) return <span className="badge badge-source badge-ifct">IFCT</span>
+    if (s.includes('USDA')) return <span className="badge badge-source badge-usda">USDA</span>
+    if (s.includes('PROXY')) return <span className="badge badge-source badge-proxy">PROXY</span>
+    return <span className="badge badge-source badge-other">{s}</span>
+  }
+
   return (
     <div className="card-panel ingredient-master-panel">
       {/* Header and Controls */}
@@ -84,7 +98,7 @@ export default function IngredientMaster({
         <div>
           <h4>Ingredient Master Database</h4>
           <p className="subtext">
-            Standard reference composition (IFCT, USDA, Supplier COA). Missing nutrients are stored as null (not zero).
+            Authoritative baseline composition (IFCT, USDA, Verified Internal, Supplier COA). Missing nutrients are stored as null (not zero).
           </p>
         </div>
 
@@ -152,7 +166,12 @@ export default function IngredientMaster({
                   )}
                   {ing.metadata?.isSalt && (
                     <span className="badge badge-danger" style={{ marginLeft: 6 }}>
-                      Salt
+                      Salt ({((ing.metadata?.sodiumFraction || 0.393) * 100).toFixed(1)}% Na)
+                    </span>
+                  )}
+                  {ing.metadata?.requiresSupplierCoa && (
+                    <span className="badge badge-purple" style={{ marginLeft: 6 }}>
+                      COA Required
                     </span>
                   )}
                   {ing.metadata?.notes && (
@@ -168,11 +187,7 @@ export default function IngredientMaster({
                 <td className="font-mono">{fmtWithUnit(ing.nutrients?.dietaryFiber, 'g')}</td>
                 <td className="font-mono">{fmtWithUnit(ing.nutrients?.totalFat, 'g')}</td>
                 <td className="font-mono">{fmtWithUnit(ing.nutrients?.sodium, 'mg', 0)}</td>
-                <td>
-                  <span className={`badge badge-source badge-${(ing.metadata?.sourceType || 'IFCT').toLowerCase()}`}>
-                    {ing.metadata?.sourceType || 'IFCT'}
-                  </span>
-                </td>
+                <td>{renderSourceBadge(ing.metadata?.sourceType)}</td>
                 <td>
                   <div className="table-row-actions">
                     <button
@@ -256,6 +271,7 @@ export default function IngredientMaster({
                   { key: 'energy', label: 'Energy (kcal)' },
                   { key: 'protein', label: 'Protein (g)' },
                   { key: 'totalCarb', label: 'Total Carbohydrate (g)' },
+                  { key: 'availableCarb', label: 'Available Carbohydrate (g)' },
                   { key: 'totalSugar', label: 'Total Sugars (g)' },
                   { key: 'addedSugar', label: 'Added Sugars (g)' },
                   { key: 'dietaryFiber', label: 'Dietary Fiber (g)' },
@@ -313,6 +329,7 @@ export default function IngredientMaster({
                       })
                     }
                   >
+                    <option value="INTERNAL_CONFIRMED_BASE">Internal Confirmed Base (Mithila)</option>
                     <option value="IFCT">IFCT (ICMR-NIN)</option>
                     <option value="USDA">USDA FoodData Central</option>
                     <option value="SUPPLIER_COA">Supplier Certificate of Analysis (COA)</option>
@@ -335,15 +352,15 @@ export default function IngredientMaster({
                       })
                     }
                   >
-                    <option value="high">High (Standard Lab / IFCT)</option>
-                    <option value="medium">Medium (Standard Reference)</option>
-                    <option value="medium-low">Medium-Low (Supplier Dependent)</option>
-                    <option value="low">Low (Requires Supplier COA)</option>
+                    <option value="High">High (Internal Base / Accredited Lab)</option>
+                    <option value="Medium">Medium (Standard Reference IFCT/USDA)</option>
+                    <option value="Medium-Low">Medium-Low (Supplier Dependent)</option>
+                    <option value="Low">Low (Requires Supplier COA)</option>
                   </select>
                 </div>
               </div>
 
-              <div className="form-row-2">
+              <div className="form-row-3">
                 <div className="form-group checkbox-group">
                   <label>
                     <input
@@ -359,7 +376,26 @@ export default function IngredientMaster({
                         })
                       }
                     />{' '}
-                    Is Salt / Added Sodium Chloride
+                    Is Salt / Mineral
+                  </label>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={editingIngredient.metadata?.requiresSupplierCoa || false}
+                      onChange={(e) =>
+                        setEditingIngredient({
+                          ...editingIngredient,
+                          metadata: {
+                            ...editingIngredient.metadata,
+                            requiresSupplierCoa: e.target.checked,
+                          },
+                        })
+                      }
+                    />{' '}
+                    Requires Supplier COA
                   </label>
                 </div>
 
@@ -378,10 +414,34 @@ export default function IngredientMaster({
                         })
                       }
                     />{' '}
-                    Contains Gluten Allergen (e.g., Barley/Wheat)
+                    Contains Gluten Allergen
                   </label>
                 </div>
               </div>
+
+              {editingIngredient.metadata?.isSalt && (
+                <div className="form-group">
+                  <label>Sodium Fraction (e.g. 0.393 for iodised salt NaCl, leave blank if unverified)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    max="1"
+                    className="text-input"
+                    value={editingIngredient.metadata?.sodiumFraction || ''}
+                    onChange={(e) =>
+                      setEditingIngredient({
+                        ...editingIngredient,
+                        metadata: {
+                          ...editingIngredient.metadata,
+                          sodiumFraction: e.target.value === '' ? null : Number(e.target.value),
+                        },
+                      })
+                    }
+                    placeholder="e.g. 0.393"
+                  />
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Provenance Notes / Regulatory Warnings</label>

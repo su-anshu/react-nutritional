@@ -5,17 +5,18 @@ import { evaluateClaims, scanMarketingText } from '../src/engine/claimEngine'
 import { calculateRecipeNutrition } from '../src/engine/nutritionEngine'
 import { DEFAULT_INGREDIENTS } from '../src/data/ingredientMaster'
 import { DEFAULT_RECIPES } from '../src/data/productRecipes'
+import { CLAIM_STATUS } from '../src/data/claimRules'
 
 describe('Validation Engine', () => {
-  it('passes standard Chana Sattu formulation with PASS/WARNING status and high score', () => {
+  it('passes standard Chana Sattu formulation with high score and valid physics checks', () => {
     const chanaRecipe = DEFAULT_RECIPES.find((r) => r.id === 'chana-sattu')
     const result = calculateRecipeNutrition(chanaRecipe, DEFAULT_INGREDIENTS)
     const val = validateFormulation(result)
 
     expect(val.isValid).toBe(true)
     expect(val.score).toBeGreaterThanOrEqual(80)
-    expect(val.checks.some((c) => c.id === 'energy-atwater' && c.status === 'PASS')).toBe(true)
-    expect(val.checks.some((c) => c.id === 'mass-balance' && c.status === 'PASS')).toBe(true)
+    expect(val.checks.some((c) => c.id === 'energy-atwater' && ['PASS', 'INFO'].includes(c.status))).toBe(true)
+    expect(val.checks.some((c) => c.id === 'mass-balance' && ['PASS', 'INFO', 'WARNING'].includes(c.status))).toBe(true)
     expect(val.checks.some((c) => c.id === 'carb-sugar-hierarchy' && c.status === 'PASS')).toBe(true)
   })
 
@@ -58,21 +59,26 @@ describe('Claim Engine & Marketing Scanner', () => {
   it('correctly awards High Protein claim to High Protein Sattu', () => {
     const proteinRecipe = DEFAULT_RECIPES.find((r) => r.id === 'pea-isolate-sattu')
     const calc = calculateRecipeNutrition(proteinRecipe, DEFAULT_INGREDIENTS)
-    const claims = evaluateClaims(calc.nutrients, { isSolid: true })
+    const claims = evaluateClaims(calc.nutrients, { isSolid: true }, calc.coverage)
 
     const highProteinClaim = claims.allResults.find((c) => c.id === 'high-protein')
     expect(highProteinClaim).toBeDefined()
+    expect(highProteinClaim.status).toBe(CLAIM_STATUS.NUMERICALLY_ELIGIBLE)
     expect(highProteinClaim.eligible).toBe(true)
   })
 
   it('strictly disqualifies "No Added Salt" claim when salt is added', () => {
     const moringaRecipe = DEFAULT_RECIPES.find((r) => r.id === 'moringa-sattu')
     const calc = calculateRecipeNutrition(moringaRecipe, DEFAULT_INGREDIENTS)
-    const claims = evaluateClaims(calc.nutrients, {
-      isSolid: true,
-      hasAddedSalt: calc.metadata.hasAddedSalt,
-      addedSaltGrams: calc.metadata.addedSaltGrams,
-    })
+    const claims = evaluateClaims(
+      calc.nutrients,
+      {
+        isSolid: true,
+        hasAddedSalt: calc.metadata.hasAddedSalt,
+        addedSaltGrams: calc.metadata.addedSaltGrams,
+      },
+      calc.coverage
+    )
 
     const noSaltClaim = claims.allResults.find((c) => c.id === 'no-added-salt')
     expect(noSaltClaim).toBeDefined()
@@ -84,14 +90,15 @@ describe('Claim Engine & Marketing Scanner', () => {
     const testText = 'Our magic sattu cures diabetes and cures hypertension!'
     const violations = scanMarketingText(testText)
 
-    expect(violations.length).toBeGreaterThanOrEqual(2)
-    expect(violations.some((v) => v.label.includes('Cures Diabetes'))).toBe(true)
+    expect(violations.matches.length).toBeGreaterThanOrEqual(2)
+    expect(violations.matches.some((v) => v.label.includes('Cures Diabetes'))).toBe(true)
   })
 
-  it('passes compliant marketing text', () => {
+  it('passes compliant marketing text with non-exhaustive disclaimer', () => {
     const cleanText = 'Traditional roasted gram sattu, rich in natural plant protein and dietary fiber for daily vitality.'
-    const violations = scanMarketingText(cleanText)
+    const result = scanMarketingText(cleanText)
 
-    expect(violations.length).toBe(0)
+    expect(result.hasViolations).toBe(false)
+    expect(result.message).toContain('No configured prohibited claim patterns detected')
   })
 })

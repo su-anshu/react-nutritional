@@ -2,12 +2,12 @@
  * Validation Engine
  * 
  * Performs automated food science & statutory compliance checks:
- * 1. Energy sanity check (Atwater calculation vs stated energy)
- * 2. Mass-balance proximate sum check (physical feasibility)
+ * 1. Energy sanity check (Preferred: 4*P + 4*AvailCarb + 9*F + 2*Fiber, Fallback: 4*P + 4*TotalCarb + 9*F)
+ * 2. Mass-balance proximate sum check (correct non-overlapping carbohydrate basis)
  * 3. Carbohydrate & sugar hierarchy consistency
  * 4. Fat & fatty acid hierarchy consistency
- * 5. Salt vs Sodium balance check
- * 6. Missing critical nutrients audit
+ * 5. Salt vs Sodium balance & specialty salt fraction audit
+ * 6. Missing critical nutrients & coverage audit
  * 7. Source quality & Supplier COA warnings
  * 8. Statutory allergen check
  */
@@ -32,47 +32,72 @@ export function validateFormulation(formulationResult) {
   const protein = nutrients.protein
   const fat = nutrients.totalFat
   const carb = nutrients.totalCarb
-  const fiber = nutrients.dietaryFiber || 0
+  const availCarb = nutrients.availableCarb
+  const fiber = nutrients.dietaryFiber
   const energy = nutrients.energy
 
-  if (isNumeric(protein) && isNumeric(fat) && isNumeric(carb) && isNumeric(energy)) {
-    // Standard Atwater: 4 kcal/g protein, 9 kcal/g fat, 4 kcal/g carb (or 4 for avail carb + 2 for fiber)
-    const atwaterStandard = protein * 4 + fat * 9 + carb * 4
-    const diff = Math.abs(energy - atwaterStandard)
-    const pctDiff = energy > 0 ? (diff / energy) * 100 : 0
+  if (isNumeric(protein) && isNumeric(fat) && isNumeric(energy)) {
+    let atwaterCalculated = null
+    let formulaMethod = ''
+    let isFallback = false
 
-    if (pctDiff <= 7.0) {
-      checks.push({
-        id: 'energy-atwater',
-        name: 'Energy Sanity Check (Atwater)',
-        category: 'Physics & Feasibility',
-        status: 'PASS',
-        message: `Stated energy (${energy.toFixed(1)} kcal) matches Atwater calculation (${atwaterStandard.toFixed(1)} kcal) within ${pctDiff.toFixed(1)}% variance.`,
-        details: { stated: energy, calculated: Number(atwaterStandard.toFixed(1)), variancePct: Number(pctDiff.toFixed(1)) },
-      })
-    } else if (pctDiff <= 15.0) {
-      checks.push({
-        id: 'energy-atwater',
-        name: 'Energy Sanity Check (Atwater)',
-        category: 'Physics & Feasibility',
-        status: 'WARNING',
-        message: `Energy variance is ${pctDiff.toFixed(1)}% (Stated: ${energy.toFixed(1)} kcal vs Calculated: ${atwaterStandard.toFixed(1)} kcal). Expected for high-fiber foods.`,
-        details: { stated: energy, calculated: Number(atwaterStandard.toFixed(1)), variancePct: Number(pctDiff.toFixed(1)) },
-      })
+    if (isNumeric(availCarb) && isNumeric(fiber)) {
+      // Preferred formula: 4*P + 4*AvailCarb + 9*F + 2*Fiber
+      atwaterCalculated = (protein * 4) + (availCarb * 4) + (fat * 9) + (fiber * 2)
+      formulaMethod = 'Preferred Atwater formula (4×Protein + 4×Available Carbohydrate + 9×Fat + 2×Dietary Fibre)'
+    } else if (isNumeric(carb)) {
+      // Fallback formula: 4*P + 4*TotalCarb + 9*F
+      atwaterCalculated = (protein * 4) + (carb * 4) + (fat * 9)
+      formulaMethod = 'Fallback Atwater check — total carbohydrate basis (4×Protein + 4×Total Carbohydrate + 9×Fat)'
+      isFallback = true
+    }
+
+    if (atwaterCalculated !== null) {
+      const diff = Math.abs(energy - atwaterCalculated)
+      const pctDiff = energy > 0 ? (diff / energy) * 100 : 0
+
+      if (pctDiff <= 5.0) {
+        checks.push({
+          id: 'energy-atwater',
+          name: 'Energy Sanity Check (Internal QA)',
+          category: 'Physics & Feasibility',
+          status: 'PASS',
+          message: `Stated energy (${energy.toFixed(1)} kcal) matches Atwater calculation (${atwaterCalculated.toFixed(1)} kcal) within ${pctDiff.toFixed(1)}% variance. ${isFallback ? '(Fallback method)' : ''}`,
+          details: { stated: energy, calculated: Number(atwaterCalculated.toFixed(1)), variancePct: Number(pctDiff.toFixed(1)), formulaMethod },
+        })
+      } else if (pctDiff <= 10.0) {
+        checks.push({
+          id: 'energy-atwater',
+          name: 'Energy Sanity Check (Internal QA)',
+          category: 'Physics & Feasibility',
+          status: 'INFO',
+          message: `Energy variance is ${pctDiff.toFixed(1)}% (Stated: ${energy.toFixed(1)} kcal vs Calculated: ${atwaterCalculated.toFixed(1)} kcal). Acceptable for high-fibre whole legume foods.`,
+          details: { stated: energy, calculated: Number(atwaterCalculated.toFixed(1)), variancePct: Number(pctDiff.toFixed(1)), formulaMethod },
+        })
+      } else {
+        checks.push({
+          id: 'energy-atwater',
+          name: 'Energy Sanity Check (Internal QA)',
+          category: 'Physics & Feasibility',
+          status: 'WARNING',
+          message: `Internal QA Warning: Energy mismatch > 10%! Stated: ${energy.toFixed(1)} kcal vs Atwater: ${atwaterCalculated.toFixed(1)} kcal (${pctDiff.toFixed(1)}% diff). Check macro nutrient inputs.`,
+          details: { stated: energy, calculated: Number(atwaterCalculated.toFixed(1)), variancePct: Number(pctDiff.toFixed(1)), formulaMethod },
+        })
+      }
     } else {
       checks.push({
         id: 'energy-atwater',
-        name: 'Energy Sanity Check (Atwater)',
+        name: 'Energy Sanity Check (Internal QA)',
         category: 'Physics & Feasibility',
-        status: 'FAIL',
-        message: `Energy mismatch > 15%! Stated: ${energy.toFixed(1)} kcal vs Atwater: ${atwaterStandard.toFixed(1)} kcal (${pctDiff.toFixed(1)}% diff). Check macro nutrient inputs.`,
-        details: { stated: energy, calculated: Number(atwaterStandard.toFixed(1)), variancePct: Number(pctDiff.toFixed(1)) },
+        status: 'INFO',
+        message: 'Incomplete carbohydrate/macronutrient data; unable to perform Atwater sanity check.',
+        details: {},
       })
     }
   } else {
     checks.push({
       id: 'energy-atwater',
-      name: 'Energy Sanity Check (Atwater)',
+      name: 'Energy Sanity Check (Internal QA)',
       category: 'Physics & Feasibility',
       status: 'INFO',
       message: 'Incomplete macronutrient data; unable to perform Atwater sanity check.',
@@ -81,46 +106,70 @@ export function validateFormulation(formulationResult) {
   }
 
   // ── 2. Mass-Balance Check ──
-  const moisture = nutrients.moisture || 0
-  const ash = nutrients.ash || 0
-  const proximateSum = (protein || 0) + (fat || 0) + (carb || 0) + moisture + ash
+  const moisture = isNumeric(nutrients.moisture) ? Number(nutrients.moisture) : null
+  const ash = isNumeric(nutrients.ash) ? Number(nutrients.ash) : null
+  const hasMoistureOrAshMissing = moisture === null || ash === null
 
-  if (proximateSum > 105) {
-    checks.push({
-      id: 'mass-balance',
-      name: 'Physical Mass-Balance Check',
-      category: 'Physics & Feasibility',
-      status: 'FAIL',
-      message: `Physical violation: sum of nutrients exceeds 100g per 100g (${proximateSum.toFixed(1)}g). Check overlapping carbohydrate or moisture values.`,
-      details: { proximateSum: Number(proximateSum.toFixed(1)) },
-    })
-  } else if (proximateSum > 100.5) {
-    checks.push({
-      id: 'mass-balance',
-      name: 'Physical Mass-Balance Check',
-      category: 'Physics & Feasibility',
-      status: 'WARNING',
-      message: `Proximate sum is slightly over 100g (${proximateSum.toFixed(1)}g), within analytical rounding tolerance.`,
-      details: { proximateSum: Number(proximateSum.toFixed(1)) },
-    })
-  } else if (proximateSum >= 85) {
-    checks.push({
-      id: 'mass-balance',
-      name: 'Physical Mass-Balance Check',
-      category: 'Physics & Feasibility',
-      status: 'PASS',
-      message: `Proximate sum is physically sound (${proximateSum.toFixed(1)}g per 100g dry/semi-dry solids).`,
-      details: { proximateSum: Number(proximateSum.toFixed(1)) },
-    })
-  } else {
-    checks.push({
-      id: 'mass-balance',
-      name: 'Physical Mass-Balance Check',
-      category: 'Physics & Feasibility',
-      status: 'INFO',
-      message: `Proximate sum is ${proximateSum.toFixed(1)}g/100g. Moisture/ash data unlisted for one or more ingredients.`,
-      details: { proximateSum: Number(proximateSum.toFixed(1)) },
-    })
+  let proximateSum = 0
+  let massBalanceMethod = ''
+
+  if (isNumeric(protein) && isNumeric(fat)) {
+    if (isNumeric(availCarb) && isNumeric(fiber)) {
+      // Available carb + fiber basis
+      proximateSum = protein + fat + availCarb + fiber + (moisture || 0) + (ash || 0)
+      massBalanceMethod = 'Available Carbohydrate + Fibre basis'
+    } else if (isNumeric(carb)) {
+      // Total carb basis (do NOT add fiber again)
+      proximateSum = protein + fat + carb + (moisture || 0) + (ash || 0)
+      massBalanceMethod = 'Total Carbohydrate basis'
+    }
+
+    if (proximateSum > 102.0) {
+      checks.push({
+        id: 'mass-balance',
+        name: 'Physical Mass-Balance Check',
+        category: 'Physics & Feasibility',
+        status: 'FAIL',
+        message: `Physical violation: sum of nutrients exceeds 100g per 100g (${proximateSum.toFixed(1)}g). Check overlapping carbohydrate or moisture values.`,
+        details: { proximateSum: Number(proximateSum.toFixed(1)), massBalanceMethod },
+      })
+    } else if (proximateSum > 100.2) {
+      checks.push({
+        id: 'mass-balance',
+        name: 'Physical Mass-Balance Check',
+        category: 'Physics & Feasibility',
+        status: 'WARNING',
+        message: `Proximate sum is slightly over 100g (${proximateSum.toFixed(1)}g), within analytical rounding tolerance.`,
+        details: { proximateSum: Number(proximateSum.toFixed(1)), massBalanceMethod },
+      })
+    } else if (hasMoistureOrAshMissing) {
+      checks.push({
+        id: 'mass-balance',
+        name: 'Physical Mass-Balance Check',
+        category: 'Physics & Feasibility',
+        status: 'INFO',
+        message: `Proximate sum is ${proximateSum.toFixed(1)}g/100g. Moisture or ash data is missing/partial; proximate sum is an incomplete estimate.`,
+        details: { proximateSum: Number(proximateSum.toFixed(1)), massBalanceMethod, isPartial: true },
+      })
+    } else if (proximateSum >= 85.0) {
+      checks.push({
+        id: 'mass-balance',
+        name: 'Physical Mass-Balance Check',
+        category: 'Physics & Feasibility',
+        status: 'PASS',
+        message: `Proximate sum is physically sound (${proximateSum.toFixed(1)}g per 100g dry/semi-dry solids).`,
+        details: { proximateSum: Number(proximateSum.toFixed(1)), massBalanceMethod },
+      })
+    } else {
+      checks.push({
+        id: 'mass-balance',
+        name: 'Physical Mass-Balance Check',
+        category: 'Physics & Feasibility',
+        status: 'INFO',
+        message: `Proximate sum is ${proximateSum.toFixed(1)}g/100g. Partial proximate data available.`,
+        details: { proximateSum: Number(proximateSum.toFixed(1)), massBalanceMethod },
+      })
+    }
   }
 
   // ── 3. Carbohydrate Hierarchy Check ──
@@ -128,7 +177,7 @@ export function validateFormulation(formulationResult) {
   const addedSugar = nutrients.addedSugar
 
   if (isNumeric(carb) && isNumeric(totalSugar)) {
-    if (totalSugar > carb + 0.1) {
+    if (totalSugar > carb + 0.05) {
       checks.push({
         id: 'carb-sugar-hierarchy',
         name: 'Sugar vs Total Carbohydrate Hierarchy',
@@ -191,19 +240,41 @@ export function validateFormulation(formulationResult) {
     }
   }
 
+  if (isNumeric(fat) && isNumeric(satFat) && isNumeric(transFat)) {
+    if (satFat + transFat > fat + 0.05) {
+      checks.push({
+        id: 'sat-trans-fat-hierarchy',
+        name: 'Saturated + Trans Fat vs Total Fat',
+        category: 'Nutrient Hierarchy',
+        status: 'FAIL',
+        message: `Impossible: Saturated (${satFat.toFixed(1)}g) + Trans fat (${transFat.toFixed(1)}g) exceeds Total Fat (${fat.toFixed(1)}g).`,
+      })
+    }
+  }
+
   // ── 5. Salt vs Sodium Verification ──
   const sodium = nutrients.sodium
   const addedSaltGrams = metadata?.addedSaltGrams || 0
+  const sodiumFromAddedSalt = metadata?.sodiumFromAddedSalt || 0
 
-  if (addedSaltGrams > 0) {
-    const minSodiumFromSalt = (addedSaltGrams / (totalWeight || 100)) * 39300
-    if (sodium == null || sodium < minSodiumFromSalt * 0.85) {
+  if (metadata?.hasUnverifiedSaltFraction) {
+    checks.push({
+      id: 'specialty-salt-warning',
+      name: 'Specialty Salt Sodium Audit',
+      category: 'Formulation Integrity',
+      status: 'WARNING',
+      message: 'One or more specialty salts in this formulation lack verified sodiumFraction. Supplier sodium assay is required.',
+    })
+  }
+
+  if (addedSaltGrams > 0 && sodiumFromAddedSalt > 0) {
+    if (sodium == null || sodium < sodiumFromAddedSalt * 0.85) {
       checks.push({
         id: 'salt-sodium-consistency',
         name: 'Salt & Sodium Balance Audit',
         category: 'Formulation Integrity',
         status: 'FAIL',
-        message: `Recipe contains ${addedSaltGrams}g added salt (expected min ~${minSodiumFromSalt.toFixed(0)}mg sodium), but finished sodium is only ${sodium != null ? sodium.toFixed(0) : 'null'}mg!`,
+        message: `Recipe contains ${addedSaltGrams}g added salt (expected min ~${sodiumFromAddedSalt.toFixed(0)}mg sodium), but finished sodium is only ${sodium != null ? sodium.toFixed(0) : 'null'}mg!`,
       })
     } else {
       checks.push({
@@ -211,7 +282,7 @@ export function validateFormulation(formulationResult) {
         name: 'Salt & Sodium Balance Audit',
         category: 'Formulation Integrity',
         status: 'PASS',
-        message: `Added salt (${addedSaltGrams}g) properly accounts for ${minSodiumFromSalt.toFixed(0)}mg sodium in recipe.`,
+        message: `Added salt (${addedSaltGrams}g) properly accounts for ${sodiumFromAddedSalt.toFixed(0)}mg sodium in recipe.`,
       })
     }
   }

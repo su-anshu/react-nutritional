@@ -22,6 +22,8 @@ export default function FormulationWorkspace({
   recipe,
   recipes,
   ingredientMaster,
+  overrides = {},
+  onUpdateOverrides,
   onSelectRecipe,
   onUpdateRecipe,
   onSaveCustomRecipe,
@@ -31,8 +33,8 @@ export default function FormulationWorkspace({
 }) {
   const [activeTab, setActiveTab] = useState(FORMULATION_TABS.RECIPE)
 
-  // Calculate live nutrition from formulation
-  const formulationResult = calculateRecipeNutrition(recipe, ingredientMaster)
+  // Calculate live nutrition from formulation with active overrides
+  const formulationResult = calculateRecipeNutrition(recipe, ingredientMaster, overrides)
 
   return (
     <div className="formulation-workspace">
@@ -70,7 +72,11 @@ export default function FormulationWorkspace({
         )}
 
         {activeTab === FORMULATION_TABS.NUTRITION && (
-          <NutritionResults formulationResult={formulationResult} />
+          <NutritionResults
+            formulationResult={formulationResult}
+            overrides={overrides}
+            onUpdateOverrides={onUpdateOverrides}
+          />
         )}
 
         {activeTab === FORMULATION_TABS.CONTRIBUTION && (

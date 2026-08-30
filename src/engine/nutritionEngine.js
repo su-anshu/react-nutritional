@@ -6,7 +6,9 @@
  * - Missing ≠ Zero handling with precise coverage tracking
  * - Ingredient contribution breakdowns
  * - Recipe composite metadata (allergens, salt flags, confidence)
- * - Serving size scaling
+ * - Calculated -> Override -> Final nutrition architecture
+ * - Primary (25g), Heavy (50g), and Custom serving size scaling
+ * - Safe statutory label transfer with coverage guarding
  */
 
 import { isNumeric } from '../utils'
@@ -49,17 +51,45 @@ export const ALL_NUTRIENTS = [
 ]
 
 /**
- * Calculates recipe nutrition per 100g and serving size.
+ * Applies overrides to calculated nutrition without mutating the original.
+ * 
+ * @param {Object} calculatedNutrition - Computed values from recipe
+ * @param {Object} overrides - Nutrient overrides { [key]: { value, sourceType, sourceName, sourceDate, notes } }
+ * @returns {Object} Final merged nutrition object
+ */
+export function applyOverrides(calculatedNutrition = {}, overrides = {}) {
+  const finalNutrition = { ...calculatedNutrition }
+  if (!overrides || typeof overrides !== 'object') return finalNutrition
+
+  Object.entries(overrides).forEach(([key, overrideObj]) => {
+    if (!overrideObj) return
+    const rawVal = typeof overrideObj === 'object' ? overrideObj.value : overrideObj
+    if (rawVal !== undefined && rawVal !== null && rawVal !== '' && isNumeric(rawVal)) {
+      finalNutrition[key] = Number(Number(rawVal).toFixed(2))
+    } else if (rawVal === null) {
+      finalNutrition[key] = null
+    }
+  })
+
+  return finalNutrition
+}
+
+/**
+ * Calculates recipe nutrition per 100g, primary serving (25g), heavy serving (50g),
+ * and custom serving with override support and coverage guarding.
  * 
  * @param {Object} recipe - Recipe definition with items: [{ ingredientId, grams }]
  * @param {Array} ingredientMaster - Master list of ingredient records
- * @returns {Object} Calculated nutrition, coverage, contributions, and metadata
+ * @param {Object} overrides - Optional nutrient overrides
+ * @returns {Object} Calculated nutrition, final nutrition, coverage, contributions, and metadata
  */
-export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
+export function calculateRecipeNutrition(recipe, ingredientMaster = [], overrides = {}) {
   if (!recipe || !Array.isArray(recipe.items) || recipe.items.length === 0) {
     return {
       totalWeight: 0,
       nutrients: {},
+      calculatedNutrition: {},
+      finalNutrition: {},
       coverage: {},
       contributions: {},
       metadata: { hasAddedSalt: false, hasGluten: false, allergens: [] },
@@ -67,9 +97,18 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
     }
   }
 
-  // Create lookup map
+  // Create lookup map supporting IDs and aliases
   const ingMap = new Map()
-  ingredientMaster.forEach((ing) => ingMap.set(ing.id, ing))
+  ingredientMaster.forEach((ing) => {
+    ingMap.set(ing.id, ing)
+    if (Array.isArray(ing.aliases)) {
+      ing.aliases.forEach((alias) => {
+        if (typeof alias === 'string') {
+          ingMap.set(alias.toLowerCase(), ing)
+        }
+      })
+    }
+  })
 
   // Calculate total recipe weight
   const totalWeight = recipe.items.reduce((sum, item) => sum + (Number(item.grams) || 0), 0)
@@ -78,6 +117,8 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
     return {
       totalWeight: 0,
       nutrients: {},
+      calculatedNutrition: {},
+      finalNutrition: {},
       coverage: {},
       contributions: {},
       metadata: { hasAddedSalt: false, hasGluten: false, allergens: [] },
@@ -87,6 +128,8 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
 
   const warnings = []
   let addedSaltGrams = 0
+  let sodiumFromAddedSaltSum = 0
+  let hasUnverifiedSaltFraction = false
   let hasGluten = false
   let requiresSupplierCoa = false
   const allergens = new Set()
@@ -94,7 +137,10 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
 
   // Validate items against master
   const resolvedItems = recipe.items.map((item) => {
-    const ing = ingMap.get(item.ingredientId)
+    let ing = ingMap.get(item.ingredientId)
+    if (!ing && typeof item.ingredientId === 'string') {
+      ing = ingMap.get(item.ingredientId.toLowerCase())
+    }
     const grams = Number(item.grams) || 0
     const pct = (grams / totalWeight) * 100
 
@@ -103,16 +149,34 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
       return { item, ing: null, grams, pct }
     }
 
-    if (ing.metadata?.isSalt || ing.category === 'salt') {
+    // Salt and Sodium calculation
+    const isSalt = Boolean(ing.metadata?.isSalt || ing.category === 'salt')
+    if (isSalt) {
       addedSaltGrams += grams
+      const sodiumFraction = ing.metadata?.sodiumFraction
+      if (isNumeric(sodiumFraction)) {
+        // grams * fraction * 1000 mg/g normalized to 100g total formulation
+        const itemSodium = (grams * Number(sodiumFraction) * 1000 / totalWeight) * 100
+        sodiumFromAddedSaltSum += itemSodium
+      } else {
+        hasUnverifiedSaltFraction = true
+        warnings.push(
+          `Specialty salt "${ing.name}" is missing verified sodiumFraction. Supplier sodium composition is required.`
+        )
+      }
     }
+
     if (ing.metadata?.isGluten || (ing.metadata?.allergenNotes && /gluten/i.test(ing.metadata.allergenNotes))) {
       hasGluten = true
     }
     if (ing.metadata?.allergenNotes && ing.metadata.allergenNotes.trim()) {
       allergens.add(ing.metadata.allergenNotes.trim())
     }
-    if (ing.metadata?.requiresSupplierCoa || (ing.metadata?.confidence && /supplier coa|low/i.test(ing.metadata.confidence))) {
+    if (
+      ing.metadata?.requiresSupplierCoa ||
+      ing.metadata?.sourceType === 'PROXY_ESTIMATE' ||
+      (ing.metadata?.confidence && /supplier coa|medium-low|low/i.test(ing.metadata.confidence))
+    ) {
       requiresSupplierCoa = true
     }
 
@@ -125,7 +189,7 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
   })
 
   // Calculate nutrients per 100g
-  const nutrients = {}
+  const calculatedNutrition = {}
   const coverage = {}
   const contributions = {}
 
@@ -170,16 +234,16 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
       coveredWeight,
       totalWeight,
       percentage: Number(covPct.toFixed(1)),
-      isComplete: covPct >= 99.99,
-      isPartial: covPct > 0 && covPct < 99.99,
+      isComplete: covPct >= 99.9,
+      isPartial: covPct > 0 && covPct < 99.9,
       isMissing: covPct === 0,
     }
 
     if (covPct === 0) {
-      nutrients[nutKey] = null
+      calculatedNutrition[nutKey] = null
     } else {
       // Round appropriately
-      nutrients[nutKey] = Number(weightedSum.toFixed(2))
+      calculatedNutrition[nutKey] = Number(weightedSum.toFixed(2))
     }
 
     // Sort contributions by amount descending
@@ -187,6 +251,9 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
       (a, b) => (b.contributionAmount || 0) - (a.contributionAmount || 0)
     )
   })
+
+  // Apply Overrides to produce finalNutrition
+  const finalNutrition = applyOverrides(calculatedNutrition, overrides)
 
   // Overall core nutrient coverage
   const coreCovValues = CORE_NUTRIENTS.map((k) => coverage[k]?.percentage || 0)
@@ -204,23 +271,54 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
   if (weightedConfScore >= 2.6) compositeConfidence = 'High'
   else if (weightedConfScore < 1.7) compositeConfidence = 'Low (Requires Supplier COA)'
 
+  // Serving sizes
+  const primaryServingGrams = Number(recipe.primaryServingGrams) || 25
+  const heavyServingGrams = Number(recipe.heavyServingGrams) || 50
+  const servingGrams = Number(recipe.servingGrams) || primaryServingGrams
+  const servingSize = recipe.servingSize || `${servingGrams}g`
+
   // Salt & Sodium breakdown
-  // 1g salt (NaCl) provides ~393mg sodium
-  const totalSodium = nutrients.sodium
+  const totalSodium = finalNutrition.sodium
   const sodiumFromAddedSalt = addedSaltGrams > 0
-    ? Number(((addedSaltGrams * 39300) / totalWeight).toFixed(1))
+    ? Number(sodiumFromAddedSaltSum.toFixed(1))
     : 0
   const naturalSodium = totalSodium != null ? Math.max(0, totalSodium - sodiumFromAddedSalt) : null
+
+  // Ready nutrients for statutory label transfer (coverage >= 99.9% or overridden)
+  const readyNutrientsForLabel = {}
+  const blockedNutrientsForLabel = []
+
+  ALL_NUTRIENTS.forEach((k) => {
+    const hasOverride = overrides && overrides[k] && isNumeric(overrides[k].value)
+    if (coverage[k]?.isComplete || hasOverride) {
+      readyNutrientsForLabel[k] = finalNutrition[k]
+    } else {
+      readyNutrientsForLabel[k] = null
+      blockedNutrientsForLabel.push(k)
+    }
+  })
 
   return {
     recipeId: recipe.id,
     recipeName: recipe.name,
-    totalWeight,
-    servingSize: recipe.servingSize || '50g',
-    servingGrams: Number(recipe.servingGrams) || 50,
-    nutrients,
+    totalWeight: Number(totalWeight.toFixed(2)),
+    isWithinRounding: totalWeight >= 99.95 && totalWeight <= 100.05,
+    servingSize,
+    servingGrams,
+    primaryServingGrams,
+    heavyServingGrams,
+    nutrients: finalNutrition, // Default per 100g view uses finalNutrition
+    calculatedNutrition,
+    finalNutrition,
+    overrides,
+    per100g: finalNutrition,
+    perPrimaryServing: scaleNutrition(finalNutrition, primaryServingGrams),
+    perHeavyServing: scaleNutrition(finalNutrition, heavyServingGrams),
+    perServing: scaleNutrition(finalNutrition, servingGrams),
     coverage,
     contributions,
+    readyNutrientsForLabel,
+    blockedNutrientsForLabel,
     averageCoreCoverage: Number(averageCoreCoverage.toFixed(1)),
     metadata: {
       hasAddedSalt: addedSaltGrams > 0,
@@ -228,6 +326,7 @@ export function calculateRecipeNutrition(recipe, ingredientMaster = []) {
       addedSaltPct: Number(((addedSaltGrams / totalWeight) * 100).toFixed(2)),
       sodiumFromAddedSalt,
       naturalSodium: naturalSodium != null ? Number(naturalSodium.toFixed(1)) : null,
+      hasUnverifiedSaltFraction,
       hasGluten,
       requiresSupplierCoa,
       allergens: Array.from(allergens),
@@ -260,4 +359,63 @@ export function scaleNutrition(nutrientsPer100g, servingGrams) {
     }
   })
   return scaled
+}
+
+/**
+ * Formats data safely for statutory label transfer.
+ * Enforces that only nutrients with >=99.9% coverage or explicit overrides flow into the label.
+ * Missing/partial nutrients transfer as null.
+ */
+export function prepareSafeLabelTransfer(recipeNutrition, originType = 'RECIPE_ESTIMATE') {
+  if (!recipeNutrition) return null
+
+  const { finalNutrition, coverage, overrides, servingSize, recipeName } = recipeNutrition
+  const labelData = {
+    product: recipeName || 'Formulated Sattu',
+    servingSize: servingSize || '25g',
+    dataOrigin: originType,
+  }
+
+  let readyCount = 0
+  let totalTracked = 0
+  const blocked = []
+  const ready = []
+
+  CORE_NUTRIENTS.forEach((key) => {
+    totalTracked++
+    const isOverridden = overrides && overrides[key] && isNumeric(overrides[key].value)
+    const isComplete = coverage && coverage[key]?.isComplete
+
+    if (isComplete || isOverridden) {
+      labelData[key] = finalNutrition[key]
+      readyCount++
+      ready.push(key)
+    } else {
+      labelData[key] = null
+      blocked.push(key)
+    }
+  })
+
+  // Optional non-core nutrients
+  ;['availableCarb', 'cholesterol', 'calcium', 'iron', 'potassium', 'magnesium', 'folate', 'vitaminC'].forEach((key) => {
+    const isOverridden = overrides && overrides[key] && isNumeric(overrides[key].value)
+    const isComplete = coverage && coverage[key]?.isComplete
+    if (isComplete || isOverridden) {
+      labelData[key] = finalNutrition[key]
+    } else {
+      labelData[key] = null
+    }
+  })
+
+  return {
+    ...labelData,
+    labelData,
+    completeness: {
+      readyCount,
+      totalTracked,
+      isFullyComplete: readyCount === totalTracked,
+      ready,
+      blocked,
+    },
+  }
 }

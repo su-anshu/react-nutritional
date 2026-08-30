@@ -8,7 +8,7 @@ import { fmtWithUnit } from '../../utils'
 
 export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein }) {
   const aminoResult = calculateAminoAcids(recipe, ingredientMaster, totalProtein)
-  const { values, totals, hasData } = aminoResult
+  const { values, totals, hasData, disclaimer } = aminoResult
 
   if (!hasData) {
     return (
@@ -29,12 +29,20 @@ export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein 
         <div className="kpi-card">
           <div className="kpi-label">Branched-Chain Amino Acids (BCAA)</div>
           <div className="kpi-val highlight-bcaa">
-            {totals.totalBcaa != null ? `${totals.totalBcaa.toFixed(2)}g` : '—'}
+            {totals.totalBcaa != null ? (
+              totals.isBcaaPartial ? `≥${totals.totalBcaa.toFixed(2)}g*` : `${totals.totalBcaa.toFixed(2)}g`
+            ) : '—'}
           </div>
           <div className="kpi-sub">
-            {totals.bcaaProteinPct != null
-              ? `${totals.bcaaProteinPct}% of total protein (Leu + Ile + Val)`
-              : 'Per 100g finished product'}
+            {totals.isBcaaPartial ? (
+              <span className="warning-text">
+                *Partial estimate ({totals.minBcaaProteinCoverage}% protein coverage)
+              </span>
+            ) : totals.bcaaProteinPct != null ? (
+              `${totals.bcaaProteinPct}% of total protein (Leu + Ile + Val)`
+            ) : (
+              'Per 100g finished product'
+            )}
           </div>
         </div>
 
@@ -67,6 +75,11 @@ export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein 
         </div>
       </div>
 
+      {/* PDCAAS / Bio-availability Statutory Disclaimer Banner */}
+      <div className="amino-disclaimer-banner">
+        ℹ️ <strong>Protein Bio-efficacy Notice:</strong> {disclaimer} Complete protein claims require bio-assay validation.
+      </div>
+
       {/* Amino Acid Tables */}
       <div className="amino-tables-grid">
         {/* Essential Amino Acids */}
@@ -78,6 +91,7 @@ export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein 
                 <th>Amino Acid</th>
                 <th>Per 100g</th>
                 <th>Type</th>
+                <th>Coverage</th>
               </tr>
             </thead>
             <tbody>
@@ -98,6 +112,11 @@ export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein 
                         <span className="badge badge-neutral">EAA</span>
                       )}
                     </td>
+                    <td>
+                      <span className={`badge ${item?.isComplete ? 'badge-success' : 'badge-warning'}`}>
+                        {item?.proteinCoveragePct || 0}%
+                      </span>
+                    </td>
                   </tr>
                 )
               })}
@@ -114,6 +133,7 @@ export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein 
                 <th>Amino Acid</th>
                 <th>Per 100g</th>
                 <th>Type</th>
+                <th>Coverage</th>
               </tr>
             </thead>
             <tbody>
@@ -135,6 +155,11 @@ export default function AminoAcidPanel({ recipe, ingredientMaster, totalProtein 
                       ) : (
                         <span className="badge badge-neutral">NEAA</span>
                       )}
+                    </td>
+                    <td>
+                      <span className={`badge ${item?.isComplete ? 'badge-success' : 'badge-warning'}`}>
+                        {item?.proteinCoveragePct || 0}%
+                      </span>
                     </td>
                   </tr>
                 )

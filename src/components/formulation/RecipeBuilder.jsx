@@ -14,11 +14,16 @@ export default function RecipeBuilder({
   const [selectedPresetId, setSelectedPresetId] = useState(recipe?.id || '')
   const [isEditingMeta, setIsEditingMeta] = useState(false)
   const [recipeName, setRecipeName] = useState(recipe?.name || '')
-  const [servingSize, setServingSize] = useState(recipe?.servingSize || '50g')
-  const [servingGrams, setServingGrams] = useState(recipe?.servingGrams || 50)
+  const [servingSize, setServingSize] = useState(recipe?.servingSize || '25g')
+  const [servingGrams, setServingGrams] = useState(recipe?.servingGrams || 25)
+  const [primaryServingGrams, setPrimaryServingGrams] = useState(recipe?.primaryServingGrams || 25)
+  const [heavyServingGrams, setHeavyServingGrams] = useState(recipe?.heavyServingGrams || 50)
 
   // Calculate total recipe weight
   const totalWeight = recipe.items.reduce((sum, item) => sum + (Number(item.grams) || 0), 0)
+
+  const isExactOrRoundingTolerant = totalWeight >= 99.95 && totalWeight <= 100.05
+  const isNear100 = totalWeight >= 99.0 && totalWeight <= 101.0
 
   const handlePresetChange = (e) => {
     const id = e.target.value
@@ -57,7 +62,9 @@ export default function RecipeBuilder({
       ...recipe,
       name: recipeName,
       servingSize,
-      servingGrams: Number(servingGrams) || 50,
+      servingGrams: Number(servingGrams) || 25,
+      primaryServingGrams: Number(primaryServingGrams) || 25,
+      heavyServingGrams: Number(heavyServingGrams) || 50,
     })
     setIsEditingMeta(false)
   }
@@ -96,7 +103,7 @@ export default function RecipeBuilder({
             type="button"
             className="btn btn-primary btn-apply-label"
             onClick={onApplyToLabel}
-            title="Transfer calculated nutrition directly to Label Generator"
+            title="Transfer calculated nutrition safely to Label Generator (100% complete nutrients only)"
           >
             ⚡ Use in Label Generator
           </button>
@@ -132,9 +139,9 @@ export default function RecipeBuilder({
                 onChange={(e) => setRecipeName(e.target.value)}
               />
             </div>
-            <div className="form-row-2">
+            <div className="form-row-3">
               <div className="form-group">
-                <label>Serving Label (e.g. 50g, 2 tbsp)</label>
+                <label>Serving Label (e.g. 25g, 2 tbsp)</label>
                 <input
                   type="text"
                   className="text-input"
@@ -143,12 +150,21 @@ export default function RecipeBuilder({
                 />
               </div>
               <div className="form-group">
-                <label>Serving Grams (numeric)</label>
+                <label>Primary Daily Serving (g)</label>
                 <input
                   type="number"
                   className="text-input"
-                  value={servingGrams}
-                  onChange={(e) => setServingGrams(e.target.value)}
+                  value={primaryServingGrams}
+                  onChange={(e) => setPrimaryServingGrams(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label>Heavy Fitness Serving (g)</label>
+                <input
+                  type="number"
+                  className="text-input"
+                  value={heavyServingGrams}
+                  onChange={(e) => setHeavyServingGrams(e.target.value)}
                 />
               </div>
             </div>
@@ -172,14 +188,18 @@ export default function RecipeBuilder({
               <p className="recipe-desc">{recipe.description || 'Custom formulation'}</p>
             </div>
             <div className="meta-badges">
-              <span className="badge badge-info">Serving: {recipe.servingSize || '50g'} ({recipe.servingGrams || 50}g)</span>
+              <span className="badge badge-info">
+                Primary Serving: {recipe.primaryServingGrams || 25}g · Heavy: {recipe.heavyServingGrams || 50}g
+              </span>
               <button
                 type="button"
                 className="btn-link-edit"
                 onClick={() => {
                   setRecipeName(recipe.name || '')
-                  setServingSize(recipe.servingSize || '50g')
-                  setServingGrams(recipe.servingGrams || 50)
+                  setServingSize(recipe.servingSize || '25g')
+                  setServingGrams(recipe.servingGrams || 25)
+                  setPrimaryServingGrams(recipe.primaryServingGrams || 25)
+                  setHeavyServingGrams(recipe.heavyServingGrams || 50)
                   setIsEditingMeta(true)
                 }}
               >
@@ -190,19 +210,25 @@ export default function RecipeBuilder({
         )}
       </div>
 
-      {/* Batch Weight Summary Bar */}
-      <div className={`batch-weight-bar ${Math.abs(totalWeight - 100) > 0.1 ? 'weight-mismatch' : 'weight-100'}`}>
+      {/* Batch Weight Summary Bar with 99.95g-100.05g tolerance */}
+      <div className={`batch-weight-bar ${isExactOrRoundingTolerant ? 'weight-100' : isNear100 ? 'weight-near-100' : 'weight-mismatch'}`}>
         <div className="weight-info">
-          <span><strong>Total Batch Weight:</strong> {totalWeight.toFixed(1)}g</span>
-          {Math.abs(totalWeight - 100) > 0.1 ? (
+          <span><strong>Total Batch Weight:</strong> {totalWeight.toFixed(2)}g</span>
+          {isExactOrRoundingTolerant ? (
+            <span className="weight-note success-text">
+              ✓ Formulation balanced within standard manufacturing rounding tolerance ({totalWeight.toFixed(2)}g)
+            </span>
+          ) : isNear100 ? (
             <span className="weight-note warning-text">
-              ⚠️ Batch weight is {totalWeight.toFixed(1)}g (not 100g). Calculations are normalized per 100g.
+              ⚖️ Batch weight is {totalWeight.toFixed(2)}g. Calculations are normalized per 100g.
             </span>
           ) : (
-            <span className="weight-note success-text">✓ Standard 100g formulation base</span>
+            <span className="weight-note danger-text">
+              ⚠️ Batch weight is {totalWeight.toFixed(2)}g (significantly deviates from 100g).
+            </span>
           )}
         </div>
-        {Math.abs(totalWeight - 100) > 0.1 && (
+        {!isExactOrRoundingTolerant && (
           <button
             type="button"
             className="btn btn-sm btn-outline"
@@ -248,6 +274,9 @@ export default function RecipeBuilder({
                     {ing?.metadata?.allergenNotes && (
                       <div className="item-subnote warning-text">{ing.metadata.allergenNotes}</div>
                     )}
+                    {ing?.metadata?.requiresSupplierCoa && (
+                      <div className="item-subnote warning-text">⚠️ Supplier COA required for statutory labelling</div>
+                    )}
                     {ing?.metadata?.notes && (
                       <div className="item-subnote">{ing.metadata.notes}</div>
                     )}
@@ -255,16 +284,16 @@ export default function RecipeBuilder({
                   <td>
                     <input
                       type="number"
-                      step="0.1"
-                      min="0.1"
-                      className="text-input num-input"
+                      step="0.01"
+                      min="0.01"
+                      className="text-input num-input font-mono"
                       value={item.grams}
                       onChange={(e) => handleItemGramsChange(idx, e.target.value)}
                     />
                   </td>
                   <td>
                     <div className="pct-progress-cell">
-                      <span>{pct.toFixed(1)}%</span>
+                      <span className="font-mono">{pct.toFixed(2)}%</span>
                       <div className="pct-bar-bg">
                         <div className="pct-bar-fill" style={{ width: `${Math.min(100, pct)}%` }} />
                       </div>

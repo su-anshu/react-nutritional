@@ -7,7 +7,8 @@ import DataSettings from './components/formulation/DataSettings'
 import { DEFAULT_DATA, GOOGLE_SHEETS_URL, TEMPLATE_GROUPS } from './constants'
 import { DEFAULT_INGREDIENTS } from './data/ingredientMaster'
 import { DEFAULT_RECIPES } from './data/productRecipes'
-import { sheetsUrlToCsv, parseCsv, rowToData, fmtWithUnit } from './utils'
+import { prepareSafeLabelTransfer } from './engine/nutritionEngine'
+import { sheetsUrlToCsv, parseCsv, rowToData } from './utils'
 import {
   scaleFor,
   labelToCanvas,
@@ -38,6 +39,7 @@ const SIZE_PRESETS = [
 const LS_PREFS = 'nlg-prefs-v2'
 const LS_INGREDIENTS = 'nutrition-app-v2-ingredients'
 const LS_RECIPES = 'nutrition-app-v2-recipes'
+const LS_OVERRIDES = 'nutrition-app-v2-overrides'
 
 function loadFromStorage(key, fallback) {
   try {
@@ -69,6 +71,9 @@ export default function App() {
   const [recipes, setRecipes] = useState(() =>
     loadFromStorage(LS_RECIPES, DEFAULT_RECIPES)
   )
+  const [recipeOverrides, setRecipeOverrides] = useState(() =>
+    loadFromStorage(LS_OVERRIDES, {})
+  )
   const [activeRecipeId, setActiveRecipeId] = useState(
     recipes[0]?.id || 'chana-sattu'
   )
@@ -85,6 +90,10 @@ export default function App() {
   useEffect(() => {
     saveToStorage(LS_RECIPES, recipes)
   }, [recipes])
+
+  useEffect(() => {
+    saveToStorage(LS_OVERRIDES, recipeOverrides)
+  }, [recipeOverrides])
 
   // Label Generator State
   const [status, setStatus] = useState({ type: '', msg: '' })
@@ -160,6 +169,13 @@ export default function App() {
     )
   }
 
+  const handleUpdateRecipeOverrides = (recipeId, newOverrides) => {
+    setRecipeOverrides((prev) => ({
+      ...prev,
+      [recipeId]: newOverrides,
+    }))
+  }
+
   const handleSaveCustomRecipe = (recipeToSave) => {
     const isNew = !recipes.some((r) => r.id === recipeToSave.id)
     if (isNew) {
@@ -187,7 +203,7 @@ export default function App() {
   }
 
   const handleResetRecipes = () => {
-    if (window.confirm('Reset all formulations to the 10 standard Sattu recipes?')) {
+    if (window.confirm('Reset all formulations to the 10 standard Sattu manufacturing master recipes?')) {
       setRecipes(DEFAULT_RECIPES)
       setActiveRecipeId(DEFAULT_RECIPES[0].id)
       saveToStorage(LS_RECIPES, DEFAULT_RECIPES)
@@ -209,7 +225,7 @@ export default function App() {
   }
 
   const handleResetIngredients = () => {
-    if (window.confirm('Reset all ingredients to the default IFCT/USDA reference database?')) {
+    if (window.confirm('Reset all ingredients to the default IFCT/USDA/Internal baseline database?')) {
       setIngredients(DEFAULT_INGREDIENTS)
       saveToStorage(LS_INGREDIENTS, DEFAULT_INGREDIENTS)
     }
@@ -225,50 +241,35 @@ export default function App() {
       saveToStorage(LS_RECIPES, imported.recipes)
       if (imported.recipes[0]?.id) setActiveRecipeId(imported.recipes[0].id)
     }
+    if (imported.overrides) {
+      setRecipeOverrides(imported.overrides)
+      saveToStorage(LS_OVERRIDES, imported.overrides)
+    }
   }
 
   const handleResetAllFactory = () => {
     setIngredients(DEFAULT_INGREDIENTS)
     setRecipes(DEFAULT_RECIPES)
+    setRecipeOverrides({})
     setActiveRecipeId(DEFAULT_RECIPES[0].id)
     localStorage.removeItem(LS_INGREDIENTS)
     localStorage.removeItem(LS_RECIPES)
-    setStatus({ type: 'ok', msg: '✅ Restored all factory seed data.' })
+    localStorage.removeItem(LS_OVERRIDES)
+    setStatus({ type: 'ok', msg: '✅ Restored all factory seed formulations and ingredients.' })
   }
 
-  // Transfer formulation result into active label
+  // Safe transfer from formulation into active regulatory label
   const handleApplyFormulationToLabel = (formulationResult) => {
     if (!formulationResult || !formulationResult.nutrients) return
 
-    const newLabelData = {
-      product: formulationResult.recipeName || 'Formulated Sattu',
-      servingSize: formulationResult.servingSize || '50g',
-      energy: formulationResult.nutrients.energy,
-      protein: formulationResult.nutrients.protein,
-      totalCarb: formulationResult.nutrients.totalCarb,
-      availableCarb: formulationResult.nutrients.availableCarb,
-      totalSugar: formulationResult.nutrients.totalSugar,
-      addedSugar: formulationResult.nutrients.addedSugar,
-      dietaryFiber: formulationResult.nutrients.dietaryFiber,
-      totalFat: formulationResult.nutrients.totalFat,
-      saturatedFat: formulationResult.nutrients.saturatedFat,
-      transFat: formulationResult.nutrients.transFat,
-      sodium: formulationResult.nutrients.sodium,
-      cholesterol: formulationResult.nutrients.cholesterol,
-      calcium: formulationResult.nutrients.calcium,
-      iron: formulationResult.nutrients.iron,
-      potassium: formulationResult.nutrients.potassium,
-      magnesium: formulationResult.nutrients.magnesium,
-      folate: formulationResult.nutrients.folate,
-      vitaminC: formulationResult.nutrients.vitaminC,
-    }
+    const safeLabelData = prepareSafeLabelTransfer(formulationResult, 'RECIPE_ESTIMATE')
 
-    setData(newLabelData)
-    setSelected(newLabelData.product)
+    setData(safeLabelData)
+    setSelected(safeLabelData.product)
     setActiveView(NAV_VIEWS.LABEL_GENERATOR)
     setStatus({
       type: 'ok',
-      msg: `✅ Applied calculated formulation "${formulationResult.recipeName}" to Label Generator!`,
+      msg: `✅ Applied formulation "${safeLabelData.product}" to Label Generator (100% complete nutrients transferred; incomplete/proxy nutrients marked as "—" to prevent unverified statutory claims).`,
     })
   }
 
@@ -506,6 +507,12 @@ export default function App() {
               </button>
             </div>
 
+            {data.dataOrigin === 'RECIPE_ESTIMATE' && (
+              <div className="recipe-origin-notice">
+                🌱 <strong>Formulation Transfer Active:</strong> Displaying calculated recipe estimate. Nutrients with incomplete data coverage are held as &ldquo;—&rdquo; to protect regulatory compliance.
+              </div>
+            )}
+
             {/* Categorized Template Picker */}
             <div className="option-grid">
               <div>
@@ -527,7 +534,7 @@ export default function App() {
                 </select>
                 {isMarketingTemplate && (
                   <div className="template-disclaimer-note">
-                    ⚠️ <strong>Notice:</strong> Marketing templates are promotional visualizations and not substitutes for statutory nutrition panels.
+                    ⚠️ <strong>Notice:</strong> Marketing views are promotional visualizations and not statutory nutrition panels.
                   </div>
                 )}
               </div>
@@ -689,7 +696,7 @@ export default function App() {
                     <input
                       type="text"
                       className="text-input"
-                      value={data.servingSize || '50g'}
+                      value={data.servingSize || '25g'}
                       onChange={(e) => setData({ ...data, servingSize: e.target.value })}
                     />
                   </div>
@@ -745,6 +752,8 @@ export default function App() {
           recipe={currentRecipe}
           recipes={recipes}
           ingredientMaster={ingredients}
+          overrides={recipeOverrides[activeRecipeId] || {}}
+          onUpdateOverrides={(newOv) => handleUpdateRecipeOverrides(activeRecipeId, newOv)}
           onSelectRecipe={handleSelectRecipe}
           onUpdateRecipe={handleUpdateRecipe}
           onSaveCustomRecipe={handleSaveCustomRecipe}
