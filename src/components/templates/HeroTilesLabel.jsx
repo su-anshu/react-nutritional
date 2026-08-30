@@ -1,5 +1,5 @@
 import React from 'react'
-import { calcPercentDV, fmt, perServing } from '../../utils'
+import { calcPercentDV, fmtWithUnit, perServingWithUnit } from '../../utils'
 import { ROWS } from './shared'
 
 const HERO_FIELDS = ['energy', 'protein']
@@ -11,11 +11,11 @@ export default function HeroTilesLabel({ data, servingGrams }) {
   return (
     <>
       <div className="hero-title">Nutrition Facts</div>
-      <div className="hero-serving">Serving size {data.servingSize}</div>
+      <div className="hero-serving">Serving size {data.servingSize || '100g'}</div>
       <div className="hero-tiles">
         {heroRows.map(({ name, field, unit }) => (
           <div key={field} className="hero-tile">
-            <div className="hero-tile-value">{perServing(data[field], servingGrams)}{unit}</div>
+            <div className="hero-tile-value">{perServingWithUnit(data[field], servingGrams, unit)}</div>
             <div className="hero-tile-name">{name} / serving</div>
           </div>
         ))}
@@ -33,8 +33,8 @@ export default function HeroTilesLabel({ data, servingGrams }) {
           {restRows.map(({ name, field, unit, dvKey, sub }) => (
             <tr key={field} className={sub ? 'sub' : ''}>
               <td className="col-name">{name}</td>
-              <td className="col-num">{fmt(data[field])}{unit}</td>
-              <td className="col-num">{perServing(data[field], servingGrams)}{unit}</td>
+              <td className="col-num">{fmtWithUnit(data[field], unit)}</td>
+              <td className="col-num">{perServingWithUnit(data[field], servingGrams, unit)}</td>
               <td className="col-num">{calcPercentDV(dvKey, data[field], servingGrams)}</td>
             </tr>
           ))}

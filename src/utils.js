@@ -1,30 +1,50 @@
 import { DAILY_VALUES } from './constants'
 
+export function isNumeric(val) {
+  if (val === null || val === undefined || val === '') return false
+  const n = Number(val)
+  return !isNaN(n) && isFinite(n)
+}
+
 export function parseServingGrams(servingStr) {
+  if (!servingStr) return null
   const m = String(servingStr).match(/(\d+(?:\.\d+)?)\s*g\b/i)
   return m ? parseFloat(m[1]) : null
 }
 
 export function calcPercentDV(nutrientKey, valuePer100g, servingGrams) {
   const dv = DAILY_VALUES[nutrientKey]
-  if (!dv || servingGrams == null) return '-'
+  if (!dv || servingGrams == null || !isNumeric(valuePer100g)) return '-'
   const val = parseFloat(valuePer100g)
-  if (isNaN(val) || val < 0) return '-'
+  if (val < 0) return '-'
   if (val === 0) return '0.0%'
   const pct = (val * servingGrams / 100 / dv) * 100
   return `${pct.toFixed(1)}%`
 }
 
-export function fmt(val) {
+export function fmt(val, decimals = 1) {
+  if (!isNumeric(val)) return '—'
   const n = parseFloat(val)
-  return isNaN(n) ? '0.0' : n.toFixed(1)
+  return n.toFixed(decimals)
 }
 
 // Convert a per-100g value into the per-serving amount, formatted.
-export function perServing(valuePer100g, servingGrams) {
+export function perServing(valuePer100g, servingGrams, decimals = 1) {
+  if (!isNumeric(valuePer100g) || servingGrams == null) return '—'
   const v = parseFloat(valuePer100g)
-  if (isNaN(v) || servingGrams == null) return fmt(valuePer100g)
-  return fmt(v * servingGrams / 100)
+  return fmt(v * servingGrams / 100, decimals)
+}
+
+// Format a value with its unit attached, or return '—' if missing (without dangling unit)
+export function fmtWithUnit(val, unit = '', decimals = 1) {
+  if (!isNumeric(val)) return '—'
+  return `${fmt(val, decimals)}${unit}`
+}
+
+// Format a per-serving value with its unit attached, or return '—' if missing
+export function perServingWithUnit(valuePer100g, servingGrams, unit = '', decimals = 1) {
+  if (!isNumeric(valuePer100g) || servingGrams == null) return '—'
+  return `${perServing(valuePer100g, servingGrams, decimals)}${unit}`
 }
 
 // Convert Google Sheets share URL → CSV export URL
@@ -58,25 +78,30 @@ export function parseCsv(text) {
   })
 }
 
-// Map a CSV row object → label data shape
+// Map a CSV row object → label data shape (missing values remain null, never converted to zero)
 export function rowToData(row) {
-  const n = (key, fallback = 0) => {
-    const v = parseFloat(row[key])
-    return isNaN(v) ? fallback : v
+  const parseCell = (key) => {
+    const raw = row[key]
+    if (raw === undefined || raw === null || String(raw).trim() === '' || String(raw).trim() === '-' || String(raw).trim() === '—') {
+      return null
+    }
+    const v = parseFloat(raw)
+    return isNaN(v) ? null : v
   }
+
   return {
     product:      row['Product'] ?? '',
     servingSize:  row['Serving Size'] ?? '100g',
-    energy:       n('Energy'),
-    protein:      n('Protein'),
-    totalCarb:    n('Total Carbohydrate'),
-    totalSugar:   n('Total Sugars'),
-    addedSugar:   n('Added Sugars'),
-    dietaryFiber: n('Dietary Fiber'),
-    totalFat:     n('Total Fat'),
-    saturatedFat: n('Saturated Fat'),
-    transFat:     n('Trans Fat'),
-    sodium:       n('Sodium(mg)'),
-    cholesterol:  n('Cholesterol'),
+    energy:       parseCell('Energy'),
+    protein:      parseCell('Protein'),
+    totalCarb:    parseCell('Total Carbohydrate'),
+    totalSugar:   parseCell('Total Sugars'),
+    addedSugar:   parseCell('Added Sugars'),
+    dietaryFiber: parseCell('Dietary Fiber'),
+    totalFat:     parseCell('Total Fat'),
+    saturatedFat: parseCell('Saturated Fat'),
+    transFat:     parseCell('Trans Fat'),
+    sodium:       parseCell('Sodium(mg)'),
+    cholesterol:  parseCell('Cholesterol'),
   }
 }

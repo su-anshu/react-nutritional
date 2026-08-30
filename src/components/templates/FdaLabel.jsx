@@ -1,9 +1,10 @@
 import React from 'react'
-import { calcPercentDV, perServing } from '../../utils'
+import { calcPercentDV, perServing, perServingWithUnit } from '../../utils'
 import { ThinLine, ThickLine, FDA_ROWS } from './shared'
 
 // ── FDA-style vertical panel (per serving amounts, %DV on the right) ──
 export default function FdaLabel({ data, servingGrams }) {
+  const calVal = perServing(data.energy, servingGrams, 0)
   return (
     <>
       <div className="label-title">Nutrition Facts</div>
@@ -11,7 +12,7 @@ export default function FdaLabel({ data, servingGrams }) {
 
       <div className="serving-row">
         <span>Serving size</span>
-        <span>{data.servingSize}</span>
+        <span>{data.servingSize || '100g'}</span>
       </div>
 
       <div style={{ marginTop: 6 }}><ThickLine /></div>
@@ -22,7 +23,7 @@ export default function FdaLabel({ data, servingGrams }) {
           <div className="fda-cal-word">Calories</div>
         </div>
         <div className="fda-cal-value">
-          {Math.round(parseFloat(perServing(data.energy, servingGrams)) || 0)}
+          {calVal === '—' ? '—' : Math.round(parseFloat(calVal))}
         </div>
       </div>
 
@@ -33,7 +34,7 @@ export default function FdaLabel({ data, servingGrams }) {
       {FDA_ROWS.map(({ label, field, unit, dvKey, bold, indent }) => (
         <div key={field} className={`fda-row${bold ? ' bold' : ''} indent-${indent}`}>
           <span className="fda-row-name">
-            <span className="fda-row-label">{label}</span> {perServing(data[field], servingGrams)}{unit}
+            <span className="fda-row-label">{label}</span> {perServingWithUnit(data[field], servingGrams, unit)}
           </span>
           <span className="fda-row-dv">{calcPercentDV(dvKey, data[field], servingGrams)}</span>
         </div>

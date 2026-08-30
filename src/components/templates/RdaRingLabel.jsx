@@ -1,5 +1,5 @@
 import React from 'react'
-import { calcPercentDV, fmt, perServing } from '../../utils'
+import { calcPercentDV, fmtWithUnit, perServingWithUnit } from '../../utils'
 import { ROWS } from './shared'
 
 // Small SVG progress ring rendering a "NN.N%" string (or a dash when absent)
@@ -31,7 +31,7 @@ export default function RdaRingLabel({ data, servingGrams }) {
   return (
     <>
       <div className="rr-title">Nutrition Facts</div>
-      <div className="rr-serving">Serving size {data.servingSize}</div>
+      <div className="rr-serving">Serving size {data.servingSize || '100g'}</div>
       <table className="rr-table">
         <thead>
           <tr>
@@ -45,8 +45,8 @@ export default function RdaRingLabel({ data, servingGrams }) {
           {ROWS.map(({ name, field, unit, dvKey, sub }) => (
             <tr key={field} className={sub ? 'sub' : ''}>
               <td className="col-name">{name}</td>
-              <td className="col-num">{fmt(data[field])}{unit}</td>
-              <td className="col-num">{perServing(data[field], servingGrams)}{unit}</td>
+              <td className="col-num">{fmtWithUnit(data[field], unit)}</td>
+              <td className="col-num">{perServingWithUnit(data[field], servingGrams, unit)}</td>
               <td className="rr-dv-cell"><Ring pctText={calcPercentDV(dvKey, data[field], servingGrams)} /></td>
             </tr>
           ))}

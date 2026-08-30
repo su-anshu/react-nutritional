@@ -1,5 +1,5 @@
 import React from 'react'
-import { calcPercentDV, fmt, perServing } from '../../utils'
+import { calcPercentDV, fmtWithUnit, perServingWithUnit } from '../../utils'
 import { ROWS } from './shared'
 
 // Category color swatch per nutrient — groups sub-rows under their parent's hue
@@ -15,7 +15,7 @@ export default function IconRowLabel({ data, servingGrams }) {
   return (
     <>
       <div className="ir-title">Nutrition Facts</div>
-      <div className="ir-serving">Serving size {data.servingSize}</div>
+      <div className="ir-serving">Serving size {data.servingSize || '100g'}</div>
       <table className="ir-table">
         <thead>
           <tr>
@@ -31,8 +31,8 @@ export default function IconRowLabel({ data, servingGrams }) {
             <tr key={field} className={sub ? 'sub' : ''}>
               <td className="ir-swatch"><span style={{ background: SWATCH[field] }} /></td>
               <td className="col-name">{name}</td>
-              <td className="col-num">{fmt(data[field])}{unit}</td>
-              <td className="col-num">{perServing(data[field], servingGrams)}{unit}</td>
+              <td className="col-num">{fmtWithUnit(data[field], unit)}</td>
+              <td className="col-num">{perServingWithUnit(data[field], servingGrams, unit)}</td>
               <td className="col-num">{calcPercentDV(dvKey, data[field], servingGrams)}</td>
             </tr>
           ))}
