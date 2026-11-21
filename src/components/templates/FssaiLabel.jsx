@@ -22,7 +22,7 @@ export default function FssaiLabel({ data, servingGrams }) {
       <table className="nutri-table">
         <thead>
           <tr>
-            <th className="col-name"></th>
+            <th className="col-name">Nutrients</th>
             <th className="col-num">Per 100g*</th>
             <th className="col-num">Per {servingGrams != null ? `${servingGrams} g` : 'Serving'}</th>
             <th className="col-num">% RDA**</th>

@@ -135,6 +135,7 @@ function buildFssaiSvg(data, mmWidth) {
 
   // Table header
   tableParts.push(
+    `<text x="${COL_NAME_X}" y="${y + 13}" font-family="${FONT_BLACK}" font-size="10" fill="#000000">Nutrients</text>`,
     `<text x="${COL1_RIGHT}" y="${y + 13}" text-anchor="end" font-family="${FONT_BLACK}" font-size="10" fill="#000000">Per 100g*</text>`,
     `<text x="${COL2_RIGHT}" y="${y + 13}" text-anchor="end" font-family="${FONT_BLACK}" font-size="10" fill="#000000">${escapeXml(servingHeader)}</text>`,
     `<text x="${COL3_RIGHT}" y="${y + 13}" text-anchor="end" font-family="${FONT_BLACK}" font-size="10" fill="#000000">% RDA**</text>`

@@ -28,6 +28,7 @@ describe('Native Vector SVG Export (CorelDRAW / Print)', () => {
     expect(svg).toContain('<line ')
     expect(svg).toContain('<rect ')
     expect(svg).toContain('Nutritional Information')
+    expect(svg).toContain('>Nutrients</text>')
     expect(svg).toContain('Per 100g*')
     expect(svg).toContain('Per 25 g')
     expect(svg).toContain('% RDA**')

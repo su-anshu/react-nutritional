@@ -548,18 +548,6 @@ export default function App() {
               />
             </div>
 
-            {/* Quick link to formulate */}
-            <div className="formulation-shortcut-bar">
-              <span>Need custom recipe calculation?</span>
-              <button
-                type="button"
-                className="btn-link"
-                onClick={() => setActiveView(NAV_VIEWS.FORMULATION)}
-              >
-                Go to Formulation Engine →
-              </button>
-            </div>
-
             {data.dataOrigin === 'RECIPE_ESTIMATE' && (
               <div className="recipe-origin-notice">
                 🌱 <strong>Formulation Transfer Active:</strong> Displaying calculated recipe estimate. Nutrients with incomplete data coverage are held as &ldquo;—&rdquo; to protect regulatory compliance.
