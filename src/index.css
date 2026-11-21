@@ -487,6 +487,10 @@ h1 {
   margin-bottom: 6px;
 }
 
+.template-fssai .label-title {
+  font-size: 28px;
+}
+
 .label-thin-line {
   border: none;
   border-top: 0.75px solid #000;
@@ -550,13 +554,14 @@ h1 {
 /* First column = nutrient name (left aligned) */
 .nutri-table .col-name {
   text-align: left;
-  width: 30%;
+  width: 40%;
+  white-space: nowrap;
 }
 /* Numeric columns (right aligned) — lining tabular figures so digits and
    decimals align down each column */
 .nutri-table .col-num {
   text-align: right;
-  width: 23.33%;
+  width: 20%;
   white-space: nowrap;
   font-variant-numeric: tabular-nums lining-nums;
 }

@@ -106,31 +106,37 @@ export default function CandidateReviewModal({
           id: targetId,
           name: newIngredientName,
           category: newCategory,
-          form: candidateData.identifiedIngredient?.processing || 'powder',
-          sourceType: SOURCE_TYPES.AI_RESEARCH_CANDIDATE,
-          sourceName: citations[0]?.title || 'Gemini Grounded Research',
-          sourceUrl: citations[0]?.uri || '',
-          sourceYear: '2026',
-          confidence: groundingScore >= 70 ? 'Medium' : 'Medium-Low',
-          discoveredVia: 'GEMINI_GROUNDED_RESEARCH',
+          processing: candidateData.identifiedIngredient?.processing || 'powder',
           nutrients: {},
-          nutrientMetadata: {},
+          metadata: {
+            sourceType: SOURCE_TYPES.AI_RESEARCH_CANDIDATE,
+            sourceName: citations[0]?.title || 'Gemini Grounded Research',
+            sourceUrl: citations[0]?.uri || '',
+            sourceYear: '2026',
+            confidence: groundingScore >= 70 ? 'Medium' : 'Medium-Low',
+            discoveredVia: 'GEMINI_GROUNDED_RESEARCH',
+            nutrientMetadata: {},
+          },
+          isCustom: true,
         }
       : {
           ...currentIngredient,
           nutrients: { ...currentIngredient.nutrients },
-          nutrientMetadata: { ...(currentIngredient.nutrientMetadata || {}) },
+          metadata: {
+            ...(currentIngredient.metadata || {}),
+            nutrientMetadata: { ...(currentIngredient.metadata?.nutrientMetadata || {}) },
+          },
         }
 
     const updatedNutrients = { ...baseIngredient.nutrients }
-    const updatedMetadata = { ...baseIngredient.nutrientMetadata }
+    const updatedNutrientMetadata = { ...(baseIngredient.metadata?.nutrientMetadata || {}) }
 
     Object.keys(selectedNutrients).forEach((key) => {
       if (selectedNutrients[key]) {
         const cand = candidateNutrients[key]
         if (cand && cand.value !== null && cand.value !== undefined) {
           updatedNutrients[key] = Number(cand.value)
-          updatedMetadata[key] = {
+          updatedNutrientMetadata[key] = {
             sourceType: SOURCE_TYPES.AI_RESEARCH_CANDIDATE,
             sourceName: cand.sourceReference || citations[0]?.title || 'Grounded Gemini R&D Research',
             sourceUrl: citations[0]?.uri || '',
@@ -148,7 +154,10 @@ export default function CandidateReviewModal({
     const finalIngredient = {
       ...baseIngredient,
       nutrients: updatedNutrients,
-      nutrientMetadata: updatedMetadata,
+      metadata: {
+        ...(baseIngredient.metadata || {}),
+        nutrientMetadata: updatedNutrientMetadata,
+      },
       lastModified: new Date().toISOString(),
     }
 

@@ -163,6 +163,17 @@ describe('Safe Regulatory Label Transfer', () => {
     expect(safeLabel.iron).toBeNull()
     expect(safeLabel.dataOrigin).toBe('RECIPE_ESTIMATE')
   })
+
+  it('preserves LAB_VERIFIED overrides on incomplete nutrients when called with empty overrides and originType', () => {
+    const chanaRecipe = DEFAULT_RECIPES.find((r) => r.id === 'chana-sattu')
+    const result = calculateRecipeNutrition(chanaRecipe, DEFAULT_INGREDIENTS, {
+      iron: { value: 7.4, sourceType: 'LAB_VERIFIED', reportNumber: 'NABL-442' },
+    })
+
+    const safeLabel = prepareSafeLabelTransfer(result, {}, 'RECIPE_ESTIMATE')
+    expect(safeLabel.iron).toBe(7.4)
+    expect(safeLabel.dataOrigin).toBe('RECIPE_ESTIMATE')
+  })
 })
 
 describe('Validation Engine - Energy & Physics', () => {

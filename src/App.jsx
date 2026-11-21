@@ -20,6 +20,11 @@ import {
   makeZip,
   PRINT_DPI,
 } from './exportUtils'
+import {
+  dataToVectorSvg,
+  svgStringToBlob,
+  supportsVectorSvg,
+} from './svgExportUtils'
 
 // Top Navigation Views
 const NAV_VIEWS = {
@@ -264,7 +269,11 @@ export default function App() {
   const handleApplyFormulationToLabel = (formulationResult) => {
     if (!formulationResult || !formulationResult.nutrients) return
 
-    const safeLabelData = prepareSafeLabelTransfer(formulationResult, 'RECIPE_ESTIMATE')
+    const safeLabelData = prepareSafeLabelTransfer(
+      formulationResult,
+      {},
+      'RECIPE_ESTIMATE'
+    )
 
     setData(safeLabelData)
     setSelected(safeLabelData.product)
@@ -300,6 +309,19 @@ export default function App() {
     } finally {
       setDownloading(false)
     }
+  }
+
+  function downloadSVG() {
+    if (!supportsVectorSvg(template)) {
+      setStatus({
+        type: 'error',
+        msg: '❌ Vector SVG export is available for FSSAI and FDA statutory templates.',
+      })
+      return
+    }
+    const svgText = dataToVectorSvg(data, template, size.mm)
+    const safeName = (data.product || 'label').replace(/[\\/:*?"<>|]/g, '-')
+    downloadBlob(svgStringToBlob(svgText), `${safeName}.svg`)
   }
 
   async function copyPNG() {
@@ -388,6 +410,27 @@ export default function App() {
     }
   }
 
+  function downloadBatchSVG() {
+    if (!supportsVectorSvg(template)) {
+      setStatus({
+        type: 'error',
+        msg: '❌ Vector SVG export is available for FSSAI and FDA statutory templates.',
+      })
+      return
+    }
+    const encoder = new TextEncoder()
+    const files = []
+    for (const name of batchSelected) {
+      const row = allRows.find((r) => r['Product'] === name)
+      if (!row) continue
+      const d = rowToData(row)
+      const svgText = dataToVectorSvg(d, template, size.mm)
+      const safe = name.replace(/[\\/:*?"<>|]/g, '-')
+      files.push({ name: `${safe}.svg`, data: encoder.encode(svgText) })
+    }
+    if (files.length) downloadBlob(makeZip(files), 'NutritionLabels_SVG.zip')
+  }
+
   // Batch selection helpers
   const batchFiltered = batchQuery
     ? products.filter((p) => p.toLowerCase().includes(batchQuery.toLowerCase()))
@@ -412,6 +455,7 @@ export default function App() {
     (t) => t.id === template
   )
   const isMarketingTemplate = currentTemplateObj?.type === 'marketing'
+  const canExportVectorSvg = supportsVectorSvg(template)
 
   return (
     <div className="app">
@@ -646,6 +690,21 @@ export default function App() {
                     {downloading ? `Generating… ${progress}` : 'Batch PNG (ZIP)'}
                   </button>
                 </div>
+                <button
+                  className="btn btn-secondary btn-block"
+                  style={{ marginTop: 10 }}
+                  onClick={downloadBatchSVG}
+                  disabled={downloading || batchSelected.length === 0 || !canExportVectorSvg}
+                  title={
+                    canExportVectorSvg
+                      ? 'Export editable vector SVG files for CorelDRAW / print'
+                      : 'Switch template to FSSAI or FDA for vector SVG export'
+                  }
+                >
+                  {canExportVectorSvg
+                    ? 'Batch SVG · Vector (ZIP)'
+                    : 'Batch SVG (FSSAI / FDA only)'}
+                </button>
               </>
             )}
 
@@ -668,14 +727,29 @@ export default function App() {
                     {downloading ? 'Exporting…' : 'Download PNG'}
                   </button>
                 </div>
-                <button
-                  className="btn btn-secondary btn-block"
-                  style={{ marginTop: 10 }}
-                  onClick={copyPNG}
-                  disabled={downloading || !data.product}
-                >
-                  {copied ? '✓ Copied to clipboard' : 'Copy PNG to clipboard'}
-                </button>
+                <div className="btn-row" style={{ marginTop: 10 }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={downloadSVG}
+                    disabled={downloading || !data.product || !canExportVectorSvg}
+                    title={
+                      canExportVectorSvg
+                        ? 'Download editable vector SVG for CorelDRAW / print'
+                        : 'Switch template to FSSAI or FDA for vector SVG export'
+                    }
+                  >
+                    {canExportVectorSvg
+                      ? 'Download SVG (Vector)'
+                      : 'SVG (FSSAI / FDA only)'}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={copyPNG}
+                    disabled={downloading || !data.product}
+                  >
+                    {copied ? '✓ Copied to clipboard' : 'Copy PNG'}
+                  </button>
+                </div>
               </>
             )}
 
@@ -814,6 +888,7 @@ export default function App() {
         <DataSettings
           ingredientMaster={ingredients}
           recipes={recipes}
+          overrides={recipeOverrides}
           onImportData={handleImportData}
           onResetAllFactory={handleResetAllFactory}
         />

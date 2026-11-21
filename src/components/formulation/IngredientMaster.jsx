@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { fmtWithUnit } from '../../utils'
+import { SOURCE_TYPES } from '../../data/ingredientMaster'
 
 export default function IngredientMaster({
   ingredientMaster,
@@ -55,7 +56,7 @@ export default function IngredientMaster({
       },
       aminoAcids: {},
       metadata: {
-        sourceType: 'USER_ENTERED',
+        sourceType: SOURCE_TYPES.MANUAL_ESTIMATE,
         sourceName: 'User Custom Entry',
         confidence: 'medium',
         isSalt: false,

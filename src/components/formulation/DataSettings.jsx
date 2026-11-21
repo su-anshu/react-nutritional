@@ -3,6 +3,7 @@ import React, { useRef } from 'react'
 export default function DataSettings({
   ingredientMaster,
   recipes,
+  overrides = {},
   onImportData,
   onResetAllFactory,
 }) {
@@ -14,6 +15,7 @@ export default function DataSettings({
       exportedAt: new Date().toISOString(),
       ingredients: ingredientMaster,
       recipes: recipes,
+      overrides,
     }
 
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
